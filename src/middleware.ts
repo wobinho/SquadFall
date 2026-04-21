@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/auth'
 import { COOKIE_NAME } from '@/lib/constants'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/register', '/api/auth/reset-password']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

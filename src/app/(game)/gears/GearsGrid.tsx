@@ -357,9 +357,18 @@ function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void
                         {skill.art ? (
                           <img src={`/assets/skills/${skill.art}.png`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <span style={{ fontFamily: fonts.accent, fontSize: '52px', color: `${accentColor}22`, letterSpacing: letterSpacing.accent }}>
-                            {skill.name ? skill.name.charAt(0).toUpperCase() : '?'}
-                          </span>
+                          <>
+                            {/* grid bg */}
+                            <div style={{
+                              position: 'absolute', inset: 0,
+                              backgroundImage: `linear-gradient(${colors.line} 1px, transparent 1px), linear-gradient(90deg, ${colors.line} 1px, transparent 1px)`,
+                              backgroundSize: '16px 16px',
+                              opacity: 0.3,
+                            }} />
+                            <span style={{ fontFamily: fonts.accent, fontSize: '52px', color: `${accentColor}10`, letterSpacing: letterSpacing.accent, position: 'relative' }}>
+                              {skill.name ? skill.name.charAt(0).toUpperCase() : '?'}
+                            </span>
+                          </>
                         )}
                         {/* bottom gradient overlay */}
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 50%, rgba(10,12,16,0.6))', pointerEvents: 'none' }} />

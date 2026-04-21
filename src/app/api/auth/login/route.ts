@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { scryptSync } from 'crypto'
 import { createSession, COOKIE_NAME } from '@/lib/auth'
 import { db, initDb } from '@/lib/db'
+
+function verifyPassword(password: string, hash: string): boolean {
+  // Handle legacy 'hashed' special case (dev account with password 'commander')
+  if (hash === 'hashed') {
+    return password === 'commander'
+  }
+
+  // Verify scrypt hashed password
+  if (!hash.includes(':')) return false
+
+  const [salt, storedHash] = hash.split(':')
+  const computedHash = scryptSync(password, salt, 32).toString('hex')
+  console.log('Password verification:', { salt, storedHashLength: storedHash.length, computedHashLength: computedHash.length, match: computedHash === storedHash })
+  return computedHash === storedHash
+}
 
 async function checkPassword(
   username: string,
@@ -12,12 +28,11 @@ async function checkPassword(
     | { id: number; username: string; password_hash: string; isAdmin: number }
     | undefined
   if (!user) return null
-  const valid =
-    user.password_hash === 'hashed'
-      ? password === 'commander'
-      : user.password_hash === password
+
+  const valid = verifyPassword(password, user.password_hash)
+
   if (!valid) return null
-  return { id: user.id, username: user.username, isAdmin: user.isAdmin }
+  return { id: user.id, username: user.username, isAdmin: Number(user.isAdmin) }
 }
 
 export async function POST(req: NextRequest) {
