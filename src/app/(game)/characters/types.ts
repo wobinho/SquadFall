@@ -1,11 +1,38 @@
-import type { Faction } from '@/design/types'
+export interface PassiveRow {
+  name:    string
+  details: string
+}
+
+export interface SkillRow {
+  instanceId:   number
+  name:         string
+  art:          string | null
+  basePower:    number
+  resourceCost: number
+}
+
+export interface EquippedGearRow {
+  instanceId:        number
+  name:              string
+  art:               string | null
+  category:          string
+  subcategory:       string
+  statAttack:        number
+  resourcePoolSize:  number
+  resourceRegenRate: number
+  resourceName:      string
+  modifier:          string | null
+  level:             number
+  skills:            SkillRow[]
+}
 
 export interface CharacterRow {
   instanceId:    number
   characterId:   number
   name:          string
   art:           string | null
-  faction:       string
+  factionName:   string
+  factionColor:  string
   className:     string
   level:         number
   statHp:        number
@@ -13,19 +40,8 @@ export interface CharacterRow {
   statDefense:   number
   statFortitude: number
   statFocus:     number
-}
-
-const FACTION_ALIASES: Record<string, Faction> = {
-  ironwatch:  'ironwatch',
-  rustborn:   'rustborn',
-  ashkin:     'ashkin',
-  verdant:    'verdant',
-  syndicate:  'rustborn',
-  resistance: 'verdant',
-  fire:       'ashkin',
-  military:   'ironwatch',
-}
-
-export function normaliseFaction(raw: string): Faction {
-  return FACTION_ALIASES[raw.toLowerCase()] ?? 'ironwatch'
+  gear1:         EquippedGearRow | null
+  gear2:         EquippedGearRow | null
+  passive1:      PassiveRow | null
+  passive2:      PassiveRow | null
 }

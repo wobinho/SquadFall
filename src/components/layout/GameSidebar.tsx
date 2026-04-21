@@ -10,6 +10,8 @@ const navItems = [
   { label: 'Loadout',    href: '/loadout',    symbol: '✦' },
   { label: 'Characters', href: '/characters', symbol: '◆' },
   { label: 'Gears',      href: '/gears',      symbol: '▲' },
+  { label: 'Skills',     href: '/skills',     symbol: '◊' },
+  { label: 'Draft',      href: '/draft',      symbol: '○' },
   { label: 'Store',      href: '/store',      symbol: '◊' },
 ]
 
@@ -81,7 +83,7 @@ export default function GameSidebar({ username }: { username: string }) {
                   display: 'flex', alignItems: 'center', gap: '12.5px',
                   padding: '11.25px 25px',
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '12.5px', letterSpacing: '0.15em',
+                  fontSize: '14px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', textDecoration: 'none',
                   color: isActive ? '#f2f0ea' : '#8a8e96',
                   background: isActive ? '#1a1d22' : 'transparent',
