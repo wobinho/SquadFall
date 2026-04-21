@@ -18,6 +18,8 @@ export interface EquippedGearRow {
   category:          string
   subcategory:       string
   statAttack:        number
+  critDamage:        number
+  critChance:        number
   resourcePoolSize:  number
   resourceRegenRate: number
   resourceName:      string

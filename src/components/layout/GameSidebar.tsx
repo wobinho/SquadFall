@@ -15,7 +15,9 @@ const navItems = [
   { label: 'Store',      href: '/store',      symbol: '◊' },
 ]
 
-export default function GameSidebar({ username }: { username: string }) {
+const adminNavItem = { label: 'Admin',  href: '/admin',      symbol: '⚙' }
+
+export default function GameSidebar({ username, isAdmin }: { username: string; isAdmin: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -70,7 +72,7 @@ export default function GameSidebar({ username }: { username: string }) {
             Navigation
           </div>
 
-          {navItems.map(item => {
+          {[...navItems, ...(isAdmin ? [adminNavItem] : [])].map(item => {
             const isActive =
               item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
 

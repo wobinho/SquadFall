@@ -5,11 +5,11 @@ import { db, initDb } from '@/lib/db'
 async function checkPassword(
   username: string,
   password: string
-): Promise<{ id: number; username: string } | null> {
+): Promise<{ id: number; username: string; isAdmin: number } | null> {
   await initDb()
-  const result = await db.execute({ sql: 'SELECT id, username, password_hash FROM users WHERE username = ?', args: [username] })
+  const result = await db.execute({ sql: 'SELECT id, username, password_hash, isAdmin FROM users WHERE username = ?', args: [username] })
   const user = result.rows[0] as unknown as
-    | { id: number; username: string; password_hash: string }
+    | { id: number; username: string; password_hash: string; isAdmin: number }
     | undefined
   if (!user) return null
   const valid =
@@ -17,7 +17,7 @@ async function checkPassword(
       ? password === 'commander'
       : user.password_hash === password
   if (!valid) return null
-  return { id: user.id, username: user.username }
+  return { id: user.id, username: user.username, isAdmin: user.isAdmin }
 }
 
 export async function POST(req: NextRequest) {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  const token = await createSession({ userId: user.id, username: user.username })
+  const token = await createSession({ userId: user.id, username: user.username, isAdmin: user.isAdmin })
 
   const res = NextResponse.json({ ok: true })
   res.cookies.set(COOKIE_NAME, token, {

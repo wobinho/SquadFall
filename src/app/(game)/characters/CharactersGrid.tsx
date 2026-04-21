@@ -10,31 +10,32 @@ function StatBar({ label, value, factionColor }: { label: string; value: number;
   const pct = Math.max(0, Math.min(100, (value / STAT_MAX) * 100))
   const isHp = label === 'HP'
   const isLow = pct < 33
-
-  const fillStyle: React.CSSProperties = isHp
-    ? {
-        width: `${pct}%`,
-        background: isLow
-          ? `linear-gradient(90deg, ${colors.warn}, ${colors.warnLight})`
-          : `linear-gradient(90deg, ${colors.blood}, ${colors.bloodLight})`,
-      }
-    : {
-        width: `${pct}%`,
-        background: `linear-gradient(90deg, ${factionColor}, rgba(255,255,255,0.25))`,
-      }
+  const barColor = isHp
+    ? (isLow ? colors.warn : colors.blood)
+    : factionColor
+  const segments = 16
+  const filledSegments = Math.round((pct / 100) * segments)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: colors.muted }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
           {label}
         </span>
-        <span style={{ fontFamily: fonts.mono, fontSize: '10px', fontWeight: 700, color: colors.ink }}>
+        <span style={{ fontFamily: fonts.display, fontSize: '20px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1 }}>
           {value}
         </span>
       </div>
-      <div style={{ height: '4px', background: colors.bgDeep, border: `1px solid ${colors.line}`, overflow: 'hidden' }}>
-        <div style={{ height: '100%', transition: 'width 0.4s ease', ...fillStyle }} />
+      <div style={{ display: 'flex', gap: '2px' }}>
+        {Array.from({ length: segments }).map((_, i) => (
+          <div key={i} style={{
+            flex: 1, height: '3px',
+            background: i < filledSegments
+              ? i === filledSegments - 1 ? barColor : `${barColor}99`
+              : colors.bgDeep,
+            border: `1px solid ${i < filledSegments ? `${barColor}55` : colors.line}`,
+          }} />
+        ))}
       </div>
     </div>
   )
@@ -73,29 +74,51 @@ function PassiveSkillCard({ passive, fc }: { passive: PassiveRow | null; fc: str
   const isEmpty = !passive
   return (
     <div style={{
-      border: `1px solid ${isEmpty ? colors.bgDeep : colors.line}`,
-      background: isEmpty ? colors.bgDeep : colors.bg4,
-      padding: '12px 14px',
+      border: `1px solid ${isEmpty ? colors.line : colors.line}`,
+      background: isEmpty ? 'transparent' : `linear-gradient(135deg, ${colors.bg4}, ${colors.bgDeep})`,
       minHeight: '64px',
-      display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px',
+      display: 'flex', flexDirection: 'row',
+      overflow: 'hidden',
+      position: 'relative',
     }}>
       {isEmpty ? (
-        <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
-          Passive Skill — Not Assigned
-        </span>
+        <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', width: '100%', opacity: 0.4 }}>
+          <div style={{ width: '20px', height: '1px', background: colors.dim }} />
+          <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
+            Passive Skill — Not Assigned
+          </span>
+        </div>
       ) : (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontFamily: fonts.mono, fontSize: '10px', color: fc, lineHeight: 1 }}>◆</span>
-            <span style={{ fontFamily: fonts.display, fontSize: '22px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1 }}>
-              {passive.name}
-            </span>
+          {/* faction left-edge glow */}
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: `linear-gradient(180deg, transparent, ${fc}cc, transparent)` }} />
+          {/* Left panel — 30% for passive name */}
+          <div style={{
+            width: '30%', flexShrink: 0,
+            padding: '12px 14px 12px 16px',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px',
+            borderRight: `1px solid ${colors.line}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '4px', height: '4px', background: fc, transform: 'rotate(45deg)', flexShrink: 0 }} />
+              <span style={{ fontFamily: fonts.display, fontSize: '22px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {passive.name}
+              </span>
+            </div>
           </div>
-          {passive.details && (
-            <p style={{ fontFamily: fonts.body, fontSize: '10px', color: colors.muted, lineHeight: 1.45, margin: 0, paddingLeft: '18px' }}>
-              {passive.details}
-            </p>
-          )}
+          {/* Right panel — 70% for passive description */}
+          <div style={{
+            flex: 1, minWidth: 0,
+            padding: '12px 14px',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            background: `linear-gradient(90deg, ${fc}05, transparent)`,
+          }}>
+            {passive.details && (
+              <p style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.muted, lineHeight: 1.55, margin: 0, letterSpacing: '0.02em' }}>
+                {passive.details}
+              </p>
+            )}
+          </div>
         </>
       )}
     </div>
@@ -105,20 +128,17 @@ function PassiveSkillCard({ passive, fc }: { passive: PassiveRow | null; fc: str
 function EmptyGearSlot({ slot }: { slot: 1 | 2 }) {
   return (
     <div style={{
-      border: `1px dashed ${colors.line}`,
-      background: colors.bgDeep,
+      border: `1px solid ${colors.line}`,
+      background: 'transparent',
       overflow: 'hidden',
       display: 'flex', flexDirection: 'row',
-      flex: 1,
+      flex: 1, opacity: 0.45,
     }}>
-      {/* art placeholder */}
-      <div style={{ width: '55%', flexShrink: 0, background: 'linear-gradient(135deg, #1a1d22, #0a0c10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
-          No Image
-        </span>
+      <div style={{ width: '55%', flexShrink: 0, background: colors.bgDeep, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '24px', height: '24px', border: `1px solid ${colors.lineStrong}`, transform: 'rotate(45deg)' }} />
       </div>
-      {/* info */}
-      <div style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', borderLeft: `1px solid ${colors.line}` }}>
+      <div style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', borderLeft: `1px solid ${colors.line}` }}>
+        <div style={{ width: '10px', height: '1px', background: colors.dim }} />
         <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
           Gear Slot {slot} — Empty
         </span>
@@ -133,56 +153,66 @@ function EquippedGearCard({ gear }: { gear: EquippedGearRow }) {
   return (
     <div style={{
       border: `1px solid ${colors.line}`,
-      background: `linear-gradient(180deg, ${colors.bg3} 0%, ${colors.bg4} 100%)`,
+      background: `linear-gradient(135deg, ${colors.bg3}, ${colors.bgDeep})`,
       overflow: 'hidden',
       display: 'flex', flexDirection: 'row',
-      flex: 1,
+      flex: 1, position: 'relative',
     }}>
-      {/* accent bar — vertical left edge */}
-      <div style={{ width: '3px', background: accent, flexShrink: 0 }} />
-      {/* art panel — 55% of card width */}
-      <div style={{ position: 'relative', width: '55%', flexShrink: 0, background: 'linear-gradient(135deg, #1a1d22, #0a0c10)', overflow: 'hidden' }}>
+      {/* top accent line */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${accent}, ${accent}44, transparent)` }} />
+      {/* art panel */}
+      <div style={{ position: 'relative', aspectRatio: '16/9', flexShrink: 0, background: 'linear-gradient(135deg, #1a1d22, #0a0c10)', overflow: 'hidden' }}>
         {gear.art
           ? <img src={`/assets/gears/${gear.art}.png`} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           : (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontFamily: fonts.accent, fontSize: '24px', color: `${accent}18`, letterSpacing: letterSpacing.accent }}>
+              <span style={{ fontFamily: fonts.accent, fontSize: '28px', color: `${accent}18`, letterSpacing: letterSpacing.accent }}>
                 {fallback}
               </span>
             </div>
           )
         }
-        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4))' }} />
-        <CornerBrackets fc={accent} size={8} gap={4} />
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(90deg, transparent 60%, rgba(10,12,16,0.6)), radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35))' }} />
+        <CornerBrackets fc={`${accent}99`} size={8} gap={4} />
       </div>
-      {/* info — stacked vertically to the right */}
-      <div style={{ flex: 1, minWidth: 0, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px', borderLeft: `1px solid ${colors.line}` }}>
-        <div style={{ fontFamily: fonts.mono, fontSize: '14px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: accent }}>
-          {gear.subcategory}
+      {/* info */}
+      <div style={{ flex: 1, minWidth: 0, padding: '10px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '5px', borderLeft: `1px solid ${colors.line}`, background: `linear-gradient(90deg, ${accent}05, transparent)` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: accent }}>{gear.subcategory}</span>
+          <div style={{ flex: 1, height: '1px', background: `${accent}33` }} />
+          <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: colors.dim }}>LVL {gear.level}</span>
         </div>
-        <div style={{ fontFamily: fonts.display, fontSize: '26px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontFamily: fonts.display, fontSize: '24px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {gear.name}
         </div>
         {gear.modifier && (
-          <div style={{ fontFamily: fonts.mono, fontSize: '14px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: accent }}>
-            {gear.modifier}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ width: '3px', height: '3px', background: accent, transform: 'rotate(45deg)' }} />
+            <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: accent }}>{gear.modifier}</span>
           </div>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
-          <div style={{ fontFamily: fonts.mono, fontSize: '14px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: colors.dim }}>
-            LVL {gear.level}
+        <div style={{ display: 'grid', gridTemplateColumns: gear.resourcePoolSize > 0 ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '5px', minWidth: 0, marginTop: '2px' }}>
+          {/* Atk */}
+          <div style={{ background: `linear-gradient(180deg, ${accent}15, ${colors.bgDeep})`, border: `1px solid ${accent}44`, borderTop: `2px solid ${accent}`, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5px 4px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Atk</div>
+            <div style={{ fontFamily: fonts.display, fontSize: '20px', letterSpacing: letterSpacing.displayTight, color: accent, lineHeight: 1 }}>{gear.statAttack}</div>
           </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            <div style={{ flex: 1, height: '56px', border: `1px solid ${accent}44`, background: colors.bgDeep, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-              <div style={{ fontFamily: fonts.mono, fontSize: '12px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: colors.muted }}>ATK</div>
-              <div style={{ fontFamily: fonts.display, fontSize: '26px', letterSpacing: letterSpacing.displayTight, color: accent, lineHeight: 1 }}>{gear.statAttack}</div>
-            </div>
-            {gear.resourcePoolSize > 0 && (
-              <div style={{ flex: 1, height: '56px', border: `1px solid ${colors.line}`, background: colors.bgDeep, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-                <div style={{ fontFamily: fonts.mono, fontSize: '12px', letterSpacing: letterSpacing.labelTight, textTransform: 'uppercase', color: colors.muted }}>{gear.resourceName}</div>
-                <div style={{ fontFamily: fonts.display, fontSize: '26px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1 }}>{gear.resourcePoolSize}</div>
+          {gear.resourcePoolSize > 0 && (
+            <div style={{ background: `linear-gradient(180deg, ${colors.warn}15, ${colors.bgDeep})`, border: `1px solid ${colors.warn}44`, borderTop: `2px solid ${colors.warn}`, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5px 4px', overflow: 'hidden' }}>
+              <div style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>{gear.resourceName}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                <span style={{ fontFamily: fonts.display, fontSize: '20px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1 }}>{gear.resourcePoolSize}</span>
+                <span style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.warn, fontWeight: 700 }}>+{gear.resourceRegenRate}</span>
               </div>
-            )}
+            </div>
+          )}
+          <div style={{ background: `linear-gradient(180deg, ${colors.blood}15, ${colors.bgDeep})`, border: `1px solid ${colors.blood}44`, borderTop: `2px solid ${colors.blood}`, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5px 4px', overflow: 'hidden' }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Crit Dmg</div>
+            <div style={{ fontFamily: fonts.display, fontSize: '20px', letterSpacing: letterSpacing.displayTight, color: colors.blood, lineHeight: 1 }}>{gear.critDamage}%</div>
+          </div>
+          <div style={{ background: `linear-gradient(180deg, ${colors.blood}15, ${colors.bgDeep})`, border: `1px solid ${colors.blood}44`, borderTop: `2px solid ${colors.blood}`, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5px 4px', overflow: 'hidden' }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Crit %</div>
+            <div style={{ fontFamily: fonts.display, fontSize: '20px', letterSpacing: letterSpacing.displayTight, color: colors.blood, lineHeight: 1 }}>{gear.critChance}%</div>
           </div>
         </div>
       </div>
@@ -194,32 +224,44 @@ function SkillCard({ skill }: { skill: SkillRow }) {
   const isEmpty = skill.instanceId < 0
   return (
     <div style={{
-      border: `1px solid ${isEmpty ? colors.bgDeep : colors.line}`,
-      background: isEmpty ? colors.bgDeep : colors.bg4,
+      border: `1px solid ${colors.line}`,
+      background: isEmpty ? 'transparent' : `linear-gradient(135deg, ${colors.bg4}, ${colors.bgDeep})`,
       display: 'flex', flexDirection: 'row',
       flex: 1, minHeight: 0, overflow: 'hidden',
+      opacity: isEmpty ? 0.35 : 1,
     }}>
       {/* square art */}
       <div style={{
         aspectRatio: '1/1', flexShrink: 0, alignSelf: 'stretch', position: 'relative', overflow: 'hidden',
         background: 'linear-gradient(135deg, #1a1d22, #0a0c10)',
-        borderRight: `1px solid ${isEmpty ? colors.bgDeep : colors.line}`,
+        borderRight: `1px solid ${colors.line}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         {!isEmpty && skill.art
           ? <img src={`/assets/skills/${skill.art}.png`} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontFamily: fonts.mono, fontSize: '7px', color: colors.dim, letterSpacing: letterSpacing.labelWide }}>—</span>
+          : <div style={{ width: '12px', height: '12px', border: `1px solid ${colors.lineStrong}`, transform: 'rotate(45deg)' }} />
         }
       </div>
       {/* details */}
-      <div style={{ flex: 1, minWidth: 0, padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
-        <span style={{ fontFamily: fonts.display, fontSize: '15px', letterSpacing: letterSpacing.displayTight, color: isEmpty ? colors.dim : colors.ink, lineHeight: 1 }}>
+      <div style={{ flex: 1, minWidth: 0, padding: '7px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3px' }}>
+        <span style={{ fontFamily: fonts.display, fontSize: '16px', letterSpacing: letterSpacing.displayTight, color: isEmpty ? colors.dim : colors.ink, lineHeight: 1 }}>
           {isEmpty ? 'Empty' : skill.name}
         </span>
         {!isEmpty && (
-          <div style={{ fontFamily: fonts.mono, fontSize: '8px', color: colors.dim, textTransform: 'uppercase', letterSpacing: letterSpacing.labelTight, display: 'flex', gap: '8px' }}>
-            {skill.basePower > 0 && <span style={{ color: colors.warn }}>{skill.basePower} PWR</span>}
-            {skill.resourceCost > 0 && <span>{skill.resourceCost} RES</span>}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {skill.basePower > 0 && (
+              <span style={{ fontFamily: fonts.mono, fontSize: '8px', color: colors.warn, textTransform: 'uppercase', letterSpacing: letterSpacing.labelTight }}>
+                {skill.basePower} PWR
+              </span>
+            )}
+            {skill.basePower > 0 && skill.resourceCost > 0 && (
+              <div style={{ width: '1px', height: '8px', background: colors.line }} />
+            )}
+            {skill.resourceCost > 0 && (
+              <span style={{ fontFamily: fonts.mono, fontSize: '8px', color: colors.dim, textTransform: 'uppercase', letterSpacing: letterSpacing.labelTight }}>
+                {skill.resourceCost} RES
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -235,8 +277,11 @@ function WeaponSkillsPanel({ gear, fc }: { gear: EquippedGearRow; fc: string }) 
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: fc, padding: '8px 0', borderBottom: `1px solid ${colors.line}`, flexShrink: 0 }}>
-        {gear.name}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 0', borderBottom: `1px solid ${colors.line}`, flexShrink: 0 }}>
+        <div style={{ width: '3px', height: '3px', background: fc, transform: 'rotate(45deg)', flexShrink: 0 }} />
+        <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: fc, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {gear.name}
+        </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '1px', paddingTop: '1px' }}>
         {slots.map((skill, i) => <SkillCard key={skill.instanceId < 0 ? `empty-${i}` : skill.instanceId} skill={skill} />)}
@@ -248,8 +293,11 @@ function WeaponSkillsPanel({ gear, fc }: { gear: EquippedGearRow; fc: string }) 
 function EmptySkillsPanel({ slot }: { slot: 1 | 2 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim, padding: '8px 0', borderBottom: `1px solid ${colors.line}`, flexShrink: 0 }}>
-        Gear Slot {slot} — No Gear Equipped
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 0', borderBottom: `1px solid ${colors.line}`, flexShrink: 0, opacity: 0.4 }}>
+        <div style={{ width: '10px', height: '1px', background: colors.dim }} />
+        <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
+          Gear Slot {slot} — No Gear Equipped
+        </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '1px', paddingTop: '1px' }}>
         {[0, 1, 2].map((i) => <SkillCard key={i} skill={{ ...PLACEHOLDER_SKILL, instanceId: -(i + 1) }} />)}
@@ -294,21 +342,26 @@ function CharacterDetailModal({ character, onClose }: { character: CharacterRow;
           maxHeight: '90vh',
         } as React.CSSProperties}
       >
-        {/* faction bar across full width */}
-        <div style={{ height: '4px', background: fc, flexShrink: 0 }} />
+        {/* faction bar — tapered glow */}
+        <div style={{ height: '3px', background: `linear-gradient(90deg, ${fc}, ${fc}55, transparent)`, boxShadow: `0 0 12px ${fc}88`, flexShrink: 0 }} />
 
         {/* shared header */}
-        <div style={{ padding: '12px 16px 10px', borderBottom: `1px solid ${colors.line}`, flexShrink: 0 }}>
-          <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: fc, marginBottom: '4px' }}>
-            {character.factionName} · {character.className}
+        <div style={{ padding: '14px 16px 12px', borderBottom: `1px solid ${colors.line}`, flexShrink: 0, background: `linear-gradient(180deg, ${fc}07, transparent)` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+            <div style={{ width: '3px', height: '3px', background: fc, transform: 'rotate(45deg)' }} />
+            <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: fc }}>
+              {character.factionName} · {character.className}
+            </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontFamily: fonts.display, fontSize: '28px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
+            <span style={{ fontFamily: fonts.display, fontSize: '36px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1 }}>
               {character.name}
             </span>
-            <span style={{ fontFamily: fonts.display, fontSize: '28px', letterSpacing: letterSpacing.displayTight, color: colors.muted, lineHeight: 1 }}>
-              LVL {character.level}
-            </span>
+            <div style={{ flexShrink: 0, padding: '4px 10px', border: `1px solid ${colors.lineStrong}`, background: colors.bgDeep, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: `linear-gradient(90deg, transparent, ${colors.lineStrong}, transparent)` }} />
+              <span style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Level</span>
+              <span style={{ fontFamily: fonts.display, fontSize: '22px', letterSpacing: letterSpacing.displayTight, color: colors.muted, lineHeight: 1 }}>{character.level}</span>
+            </div>
           </div>
         </div>
 
@@ -322,40 +375,48 @@ function CharacterDetailModal({ character, onClose }: { character: CharacterRow;
             borderRight: `1px solid ${colors.line}`,
           }}>
             {/* portrait */}
-            <div style={{ position: 'relative', aspectRatio: '3/4', background: 'linear-gradient(180deg, #2a2f38, #141821)', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ position: 'relative', aspectRatio: '3/4', background: `linear-gradient(180deg, ${fc}12, #141821)`, overflow: 'hidden', flexShrink: 0 }}>
               {character.art
                 ? <img src={`/assets/characters/${character.art}.png`} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                 : (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontFamily: fonts.accent, fontSize: '96px', color: `${fc}22`, letterSpacing: letterSpacing.accent }}>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(${colors.line} 1px, transparent 1px), linear-gradient(90deg, ${colors.line} 1px, transparent 1px)`, backgroundSize: '20px 20px', opacity: 0.3 }} />
+                    <span style={{ fontFamily: fonts.accent, fontSize: '96px', color: `${fc}20`, letterSpacing: letterSpacing.accent, position: 'relative' }}>
                       {fallback}
                     </span>
                   </div>
                 )
               }
-              <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, transparent 50%, rgba(11,13,16,0.95)), radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5))' }} />
-              <CornerBrackets fc={fc} size={18} gap={8} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `linear-gradient(180deg, ${fc}08 0%, transparent 30%, rgba(11,13,16,0.92) 100%)` }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45))' }} />
+              {/* horizontal scan line */}
+              <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: '35%', height: '1px', background: `linear-gradient(90deg, transparent, ${fc}30, transparent)`, pointerEvents: 'none' }} />
+              <CornerBrackets fc={`${fc}cc`} size={18} gap={8} />
             </div>
 
             {/* stats */}
             <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', borderTop: `1px solid ${colors.line}` }}>
-              <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim, marginBottom: '2px' }}>
-                Combat Stats
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <div style={{ width: '10px', height: '1px', background: fc }} />
+                <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>
+                  Combat Stats
+                </span>
               </div>
               {stats.map((s) => <StatBar key={s.label} label={s.label} value={s.value} factionColor={fc} />)}
             </div>
           </div>
 
-          {/* ── MIDDLE PANEL — passives + equipped gear (width 2x = 560px) ── */}
+          {/* ── MIDDLE PANEL — passives + equipped gear (width 2x = 800px) ── */}
           <div style={{
-            width: 560, flexShrink: 0,
+            width: 800, flexShrink: 0,
             display: 'flex', flexDirection: 'column',
             borderRight: `1px solid ${colors.line}`,
           }}>
             {/* passive skills */}
             <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', borderBottom: `1px solid ${colors.line}` }}>
-              <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim, marginBottom: '2px' }}>
-                Passive Skills
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <div style={{ width: '10px', height: '1px', background: fc }} />
+                <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Passive Skills</span>
               </div>
               <PassiveSkillCard passive={character.passive1} fc={fc} />
               <PassiveSkillCard passive={character.passive2} fc={fc} />
@@ -363,8 +424,9 @@ function CharacterDetailModal({ character, onClose }: { character: CharacterRow;
 
             {/* equipped gear */}
             <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0 }}>
-              <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim, marginBottom: '2px' }}>
-                Equipped Gear
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <div style={{ width: '10px', height: '1px', background: colors.dim }} />
+                <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Equipped Gear</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0 }}>
                 <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -383,8 +445,9 @@ function CharacterDetailModal({ character, onClose }: { character: CharacterRow;
             display: 'flex', flexDirection: 'column',
           }}>
             <div style={{ padding: '14px 16px 0', flexShrink: 0 }}>
-              <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim, paddingBottom: '10px' }}>
-                Weapon Skills
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px' }}>
+                <div style={{ width: '10px', height: '1px', background: colors.dim }} />
+                <span style={{ fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>Weapon Skills</span>
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '0 16px 14px', gap: '14px' }}>
@@ -405,14 +468,28 @@ function CharacterDetailModal({ character, onClose }: { character: CharacterRow;
             type="button"
             onClick={onClose}
             style={{
-              width: '100%', padding: '8px',
-              fontFamily: fonts.mono, fontSize: '9px',
+              width: '100%', padding: '9px',
+              fontFamily: fonts.mono, fontSize: '8px',
               letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase',
-              color: colors.muted, background: 'transparent',
+              color: colors.dim, background: 'transparent',
               border: `1px solid ${colors.line}`, cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.ink
+              e.currentTarget.style.borderColor = colors.lineStrong
+              e.currentTarget.style.background = colors.bgDeep
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.dim
+              e.currentTarget.style.borderColor = colors.line
+              e.currentTarget.style.background = 'transparent'
             }}
           >
-            Close
+            <div style={{ width: '12px', height: '1px', background: 'currentColor' }} />
+            Dismiss
+            <div style={{ width: '12px', height: '1px', background: 'currentColor' }} />
           </button>
         </div>
       </div>

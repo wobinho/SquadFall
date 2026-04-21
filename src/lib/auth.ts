@@ -9,6 +9,7 @@ const SECRET = new TextEncoder().encode(
 export interface SessionPayload {
   userId: number
   username: string
+  isAdmin: number
 }
 
 export async function createSession(payload: SessionPayload): Promise<string> {

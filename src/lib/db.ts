@@ -20,8 +20,8 @@ export async function initDb() {
 
   // Seed the test user
   await db.execute({
-    sql: 'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-    args: ['commander', 'test@squadfall.com', 'hashed'],
+    sql: 'INSERT INTO users (username, email, password_hash, isAdmin) VALUES (?, ?, ?, ?)',
+    args: ['commander', 'test@squadfall.com', 'hashed', 1],
   })
 
   const userRow = await db.execute({

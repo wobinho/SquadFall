@@ -18,6 +18,12 @@ export default async function GearsPage() {
         g.category,
         g.subcategory,
         g.stat_attack,
+        g.crit_damage,
+        g.crit_chance,
+        g.accuracy,
+        g.penetration,
+        g.chain,
+        g.weight,
         g.resource_pool_size,
         g.resource_regen_rate,
         g.resource_name,
@@ -31,19 +37,45 @@ export default async function GearsPage() {
     args: [session.userId],
   })
 
-  const gears: GearRow[] = result.rows.map((r) => ({
-    instanceId:        r.instance_id        as number,
-    gearId:            r.gear_id            as number,
-    name:              r.name               as string,
-    art:               r.art                as string | null,
-    category:          r.category           as string,
-    subcategory:       r.subcategory        as string,
-    statAttack:        r.stat_attack        as number,
-    resourcePoolSize:  r.resource_pool_size as number,
-    resourceRegenRate: r.resource_regen_rate as number,
-    resourceName:      r.resource_name      as string,
-    modifier:          r.modifier           as string | null,
-    level:             r.level              as number,
+  const gears: GearRow[] = await Promise.all(result.rows.map(async (r) => {
+    const skillResult = await db.execute({
+      sql: `
+        SELECT s.*
+        FROM skill_instances si
+        JOIN skills s ON s.id = si.skill_id
+        WHERE si.equipped_to = ?
+        ORDER BY si.id ASC
+      `,
+      args: [r.instance_id as number],
+    })
+
+    return {
+      instanceId:        r.instance_id        as number,
+      gearId:            r.gear_id            as number,
+      name:              r.name               as string,
+      art:               r.art                as string | null,
+      category:          r.category           as string,
+      subcategory:       r.subcategory        as string,
+      statAttack:        r.stat_attack        as number,
+      critDamage:        r.crit_damage        as number,
+      critChance:        r.crit_chance        as number,
+      accuracy:          r.accuracy           as number,
+      penetration:       r.penetration        as number,
+      chain:             r.chain              as number,
+      weight:            r.weight             as number,
+      resourcePoolSize:  r.resource_pool_size as number,
+      resourceRegenRate: r.resource_regen_rate as number,
+      resourceName:      r.resource_name      as string,
+      modifier:          r.modifier           as string | null,
+      level:             r.level              as number,
+      skills: skillResult.rows.map((sr) => ({
+        id: sr.id as number,
+        name: (sr.skill_name ?? sr.name) as string,
+        art: sr.art as string | null,
+        basePower: (sr.base_power ?? sr.power) as number,
+        resourceCost: sr.resource_cost as number,
+      })),
+    }
   }))
 
   return (
