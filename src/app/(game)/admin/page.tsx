@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { BattleSimulator } from './BattleSim'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -540,40 +541,35 @@ export default function AdminPage() {
           {/* ── main panel ── */}
           <div style={{ flex: 1, minWidth: 0 }}>
 
-          {section === 'battle-simulator' && (() => {
-            const BATTLE_TABS: Record<BattleSimTab, { title: string; subtitle: string; icon: string }> = {
-              'combat-module':    { title: 'COMBAT MODULE',    subtitle: 'SQUADFALL OS v2.1 // COMBAT ENGINE',    icon: '◉' },
-              'simulator-config': { title: 'SIMULATOR CONFIG', subtitle: 'SQUADFALL OS v2.1 // SIM CONFIGURATION', icon: '◑' },
-              'enemy-view':       { title: 'ENEMY VIEW',       subtitle: 'SQUADFALL OS v2.1 // THREAT ANALYSIS',   icon: '◈' },
-            }
-            const tab = BATTLE_TABS[battleTab]
-            return (
-              <div style={{
-                border: '1px solid #1e1a14',
-                background: '#08090b',
-                padding: '48px 40px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: '20px', textAlign: 'center',
-                animation: 'fadeIn 0.3s ease',
-              }}>
-                <div style={{
-                  fontFamily: "'Bebas Neue', sans-serif", fontSize: '56px',
-                  letterSpacing: '0.08em', color: '#e8a736', lineHeight: 1,
-                }}>{tab.title}</div>
-                <div style={{
-                  fontSize: '9px', letterSpacing: '0.35em', color: '#4a4040',
-                  textTransform: 'uppercase',
-                }}>{tab.subtitle}</div>
-                <div style={{
-                  border: '1px dashed #2a2020', padding: '32px 60px',
-                  color: '#3a3030', fontSize: '11px', letterSpacing: '0.2em',
-                  marginTop: '16px',
-                }}>
-                  {tab.icon} PLACEHOLDER — COMING SOON
+          {section === 'battle-simulator' && (
+            <div style={{ border: '1px solid #1e1a14', background: '#08090b', padding: '28px 24px', animation: 'fadeIn 0.3s ease' }}>
+              {/* Tab header */}
+              <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #1e2228' }}>
+                <div style={{ fontSize: '9px', letterSpacing: '0.35em', color: '#4a4040', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  SQUADFALL OS v2.1 // BATTLE SIMULATOR
+                </div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '40px', letterSpacing: '0.06em', color: '#e8a736', lineHeight: 1 }}>
+                  {battleTab === 'combat-module'    ? 'COMBAT MODULE' :
+                   battleTab === 'simulator-config' ? 'SIMULATOR CONFIG' :
+                   'ENEMY VIEW'}
                 </div>
               </div>
-            )
-          })()}
+
+              {battleTab === 'simulator-config' && <BattleSimulator />}
+
+              {battleTab === 'combat-module' && (
+                <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed #2a2020', color: '#3a3030', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.2em' }}>
+                  ◉ Configure and launch a simulation from the Simulator Config tab first.
+                </div>
+              )}
+
+              {battleTab === 'enemy-view' && (
+                <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed #2a2020', color: '#3a3030', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.2em' }}>
+                  ◈ Enemy View — coming soon.
+                </div>
+              )}
+            </div>
+          )}
 
           {section === 'db' && <>
 
