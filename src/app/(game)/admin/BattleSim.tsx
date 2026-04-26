@@ -67,10 +67,9 @@ interface SimData {
   enemySkills: SimEnemySkill[]
 }
 
-// Slot config for player side
 interface GearSlot {
   gear: SimGear | null
-  skills: (SimSkill | null)[]  // 3 skills per gear
+  skills: (SimSkill | null)[]
 }
 
 interface CharSlot {
@@ -78,10 +77,9 @@ interface CharSlot {
   gears: [GearSlot, GearSlot]
 }
 
-// Enemy side config
 interface EnemySlot {
   enemy: SimEnemy | null
-  skills: (SimEnemySkill | null)[]  // up to 4 skills
+  skills: (SimEnemySkill | null)[]
 }
 
 interface EnemyWave {
@@ -95,7 +93,6 @@ interface SimConfig {
   waves: EnemyWave[]
 }
 
-// Combat state
 interface CombatUnit {
   id: string
   name: string
@@ -129,42 +126,39 @@ interface CombatLogEntry {
   type: 'action' | 'damage' | 'miss' | 'crit' | 'info' | 'wave' | 'victory' | 'defeat'
 }
 
-// ── Style helpers ──────────────────────────────────────────────────────────────
+// ── Style tokens ───────────────────────────────────────────────────────────────
 
 const C = {
-  bg:       '#08090b',
-  bg2:      '#0a0c10',
-  bg3:      '#0f1115',
-  ink:      '#f2f0ea',
-  muted:    '#8a8e96',
-  dim:      '#5a5e66',
-  line:     '#1e2228',
-  lineStr:  '#2a2f38',
-  gold:     '#e8a736',
-  blood:    '#c53030',
-  green:    '#6b8a3a',
-  enemy:    '#c53030',
+  bg:      '#08090b',
+  bg2:     '#0a0c10',
+  bg3:     '#0f1115',
+  ink:     '#f2f0ea',
+  muted:   '#8a8e96',
+  dim:     '#5a5e66',
+  line:    '#1e2228',
+  lineStr: '#2a2f38',
+  gold:    '#e8a736',
+  blood:   '#c53030',
+  green:   '#6b8a3a',
 }
 
-const MONO = "'JetBrains Mono', monospace"
+const MONO    = "'JetBrains Mono', monospace"
 const DISPLAY = "'Bebas Neue', sans-serif"
 
-function pill(label: string, value: string | number, color = C.gold) {
-  return { label, value, color }
-}
+// ── Small shared UI ────────────────────────────────────────────────────────────
 
-function MiniPill({ label, value, color = C.gold }: { label: string; value: string | number; color?: string }) {
+function StatPill({ label, value, color = C.gold }: { label: string; value: string | number; color?: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: C.bg2, border: `1px solid ${color}22`, padding: '4px 8px', minWidth: '52px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: C.bg2, border: `1px solid ${color}22`, padding: '4px 10px', minWidth: '48px' }}>
       <span style={{ fontFamily: MONO, fontSize: '7px', letterSpacing: '0.2em', color: C.dim, textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontFamily: DISPLAY, fontSize: '16px', color, lineHeight: 1 }}>{value}</span>
+      <span style={{ fontFamily: DISPLAY, fontSize: '18px', color, lineHeight: 1 }}>{value}</span>
     </div>
   )
 }
 
 function SectionHead({ label }: { label: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
       <div style={{ width: '10px', height: '1px', background: C.gold }} />
       <span style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: C.dim }}>{label}</span>
       <div style={{ flex: 1, height: '1px', background: C.line }} />
@@ -172,7 +166,29 @@ function SectionHead({ label }: { label: string }) {
   )
 }
 
-// ── Selector Dropdown ─────────────────────────────────────────────────────────
+function HpBar({ current, max, color }: { current: number; max: number; color: string }) {
+  const pct   = Math.max(0, Math.min(1, current / max))
+  const segs  = 20
+  const filled = Math.round(pct * segs)
+  return (
+    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '1px', flex: 1 }}>
+        {Array.from({ length: segs }).map((_, i) => (
+          <div key={i} style={{
+            flex: 1, height: '5px',
+            background: i < filled ? (i === filled - 1 ? color : `${color}88`) : C.bg2,
+            border: `1px solid ${i < filled ? `${color}44` : C.line}`,
+          }} />
+        ))}
+      </div>
+      <span style={{ fontFamily: MONO, fontSize: '9px', color, flexShrink: 0, marginLeft: '6px', minWidth: '64px', textAlign: 'right' }}>
+        {current}/{max}
+      </span>
+    </div>
+  )
+}
+
+// ── Selector Dropdown ──────────────────────────────────────────────────────────
 
 function Selector<T extends { id: number; name: string }>({
   options, selected, onSelect, placeholder, accent = C.gold, getArt,
@@ -188,23 +204,17 @@ function Selector<T extends { id: number; name: string }>({
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    function click(e: MouseEvent) {
+    function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', click)
-    return () => document.removeEventListener('mousedown', click)
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   function Thumb({ item, size = 20 }: { item: T; size?: number }) {
     const art = getArt?.(item) ?? null
     if (!art) return null
-    return (
-      <img
-        src={art}
-        alt=""
-        style={{ width: size, height: size, objectFit: 'cover', flexShrink: 0, imageRendering: 'pixelated' }}
-      />
-    )
+    return <img src={art} alt="" style={{ width: size, height: size, objectFit: 'cover', flexShrink: 0, imageRendering: 'pixelated' }} />
   }
 
   return (
@@ -229,20 +239,29 @@ function Selector<T extends { id: number; name: string }>({
       </button>
 
       {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-          background: C.bg2, border: `1px solid ${accent}44`,
-          maxHeight: '200px', overflowY: 'auto',
-          boxShadow: `0 8px 24px rgba(0,0,0,0.6)`,
-        }}>
+        <div
+          style={{
+            position: 'fixed', zIndex: 10000,
+            background: C.bg2, border: `1px solid ${accent}44`,
+            maxHeight: '200px', overflowY: 'auto', minWidth: '200px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+          }}
+          ref={(el) => {
+            if (el && ref.current) {
+              const r = ref.current.getBoundingClientRect()
+              el.style.top  = (r.bottom + 2) + 'px'
+              el.style.left = r.left + 'px'
+              el.style.width = r.width + 'px'
+            }
+          }}
+        >
           {selected && (
             <button
               onClick={() => { onSelect(null); setOpen(false) }}
               style={{
                 width: '100%', padding: '6px 10px', textAlign: 'left',
                 background: 'none', border: 'none', borderBottom: `1px solid ${C.line}`,
-                color: C.blood, cursor: 'pointer', fontFamily: MONO, fontSize: '9px',
-                letterSpacing: '0.1em',
+                color: C.blood, cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.1em',
               }}
             >✕ Clear</button>
           )}
@@ -275,7 +294,8 @@ function Selector<T extends { id: number; name: string }>({
   )
 }
 
-// ── Gear Slot Panel ────────────────────────────────────────────────────────────
+// ── Gear Slot Panel (config) ───────────────────────────────────────────────────
+// Each gear panel is independent — its own resource display and skill list.
 
 function GearSlotPanel({
   slotLabel, gearSlot, gears, skills, onGearChange, onSkillChange, accent,
@@ -288,50 +308,66 @@ function GearSlotPanel({
   onSkillChange: (skillIdx: number, skill: SimSkill | null) => void
   accent: string
 }) {
+  const g = gearSlot.gear
   return (
-    <div style={{ border: `1px solid ${C.line}`, padding: '10px', background: C.bg2, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-        <div style={{ width: '3px', height: '3px', background: accent, transform: 'rotate(45deg)' }} />
+    <div style={{
+      flex: 1, border: `1px solid ${accent}33`, background: C.bg2,
+      display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px',
+    }}>
+      {/* header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <div style={{ width: '3px', height: '3px', background: accent, transform: 'rotate(45deg)', flexShrink: 0 }} />
         <span style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.2em', color: accent, textTransform: 'uppercase' }}>{slotLabel}</span>
       </div>
 
+      {/* gear picker */}
       <Selector
         options={gears}
-        selected={gearSlot.gear}
+        selected={g}
         onSelect={onGearChange}
-        placeholder="— Select Gear —"
+        placeholder="— No Gear —"
         accent={accent}
-        getArt={g => g.art ? `/assets/gears/${g.art}.png` : null}
+        getArt={item => item.art ? `/assets/gears/${item.art}.png` : null}
       />
 
-      {gearSlot.gear && (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
-          <div style={{ background: C.bg, border: `1px solid ${accent}22`, padding: '3px 6px', flexShrink: 0 }}>
+      {/* gear stats — only shown when a gear is selected */}
+      {g && (
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          <div style={{ background: C.bg, border: `1px solid ${accent}22`, padding: '3px 7px' }}>
             <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>ATK </span>
-            <span style={{ fontFamily: DISPLAY, fontSize: '14px', color: accent }}>{gearSlot.gear.statAttack}</span>
+            <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: accent }}>{g.statAttack}</span>
           </div>
-          {gearSlot.gear.resourcePoolSize > 0 && (
-            <div style={{ background: C.bg, border: `1px solid ${C.gold}22`, padding: '3px 6px', flexShrink: 0 }}>
-              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>{gearSlot.gear.resourceName} </span>
-              <span style={{ fontFamily: DISPLAY, fontSize: '14px', color: C.gold }}>{gearSlot.gear.resourcePoolSize}</span>
+          {g.resourcePoolSize > 0 && (
+            <div style={{ background: C.bg, border: `1px solid ${C.gold}33`, padding: '3px 7px' }}>
+              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>{g.resourceName} </span>
+              <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: C.gold }}>{g.resourcePoolSize}</span>
+            </div>
+          )}
+          {g.critChance > 0 && (
+            <div style={{ background: C.bg, border: `1px solid ${C.blood}22`, padding: '3px 7px' }}>
+              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>CRIT </span>
+              <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: C.blood }}>{g.critChance}%</span>
             </div>
           )}
         </div>
       )}
 
-      {/* 3 skill slots */}
+      {/* skill slots — always 3, disabled when no gear */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+          Skills
+        </span>
         {[0, 1, 2].map(si => (
-          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, width: '12px' }}>{si + 1}.</span>
             <div style={{ flex: 1 }}>
               <Selector
                 options={skills}
                 selected={gearSlot.skills[si]}
-                onSelect={skill => onSkillChange(si, skill)}
-                placeholder={gearSlot.gear ? '— Infuse Skill —' : '— No Gear —'}
+                onSelect={sk => onSkillChange(si, sk)}
+                placeholder={g ? '— Infuse Skill —' : '— No Gear —'}
                 accent={C.gold}
-                getArt={s => s.art ? `/assets/skills/${s.art}.png` : null}
+                getArt={sk => sk.art ? `/assets/skills/${sk.art}.png` : null}
               />
             </div>
             {gearSlot.skills[si] && (
@@ -346,7 +382,7 @@ function GearSlotPanel({
   )
 }
 
-// ── Character Slot Panel ───────────────────────────────────────────────────────
+// ── Character Slot Panel (config) ──────────────────────────────────────────────
 
 function CharSlotPanel({
   slotIdx, charSlot, simData, onCharChange, onGearChange, onSkillChange,
@@ -358,63 +394,89 @@ function CharSlotPanel({
   onGearChange: (gearIdx: 0 | 1, gear: SimGear | null) => void
   onSkillChange: (gearIdx: 0 | 1, skillIdx: number, skill: SimSkill | null) => void
 }) {
-  const fc = charSlot.character?.factionColor ?? C.lineStr
+  const fc  = charSlot.character?.factionColor ?? C.lineStr
+  const ch  = charSlot.character
 
   return (
-    <div style={{
-      border: `1px solid ${fc}44`, background: C.bg,
-      position: 'relative', overflow: 'hidden',
-    }}>
-      {/* faction top bar */}
+    <div style={{ border: `1px solid ${fc}44`, background: C.bg, position: 'relative', overflow: 'hidden' }}>
       <div style={{ height: '2px', background: `linear-gradient(90deg, ${fc}, ${fc}44, transparent)` }} />
 
-      <div style={{ padding: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <span style={{ fontFamily: DISPLAY, fontSize: '18px', color: C.dim, letterSpacing: '0.06em' }}>SLOT {slotIdx + 1}</span>
-          {charSlot.character && (
+      <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+        {/* slot label + faction */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontFamily: DISPLAY, fontSize: '20px', color: C.dim, letterSpacing: '0.06em' }}>SLOT {slotIdx + 1}</span>
+          {ch && (
             <span style={{ fontFamily: MONO, fontSize: '8px', color: fc, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              {charSlot.character.factionName}
+              {ch.factionName}
             </span>
           )}
         </div>
 
+        {/* character picker */}
         <Selector
           options={simData.characters}
-          selected={charSlot.character}
+          selected={ch}
           onSelect={onCharChange}
           placeholder="— Select Character —"
           accent={fc}
           getArt={c => c.art ? `/assets/characters/${c.art}.png` : null}
         />
 
-        {charSlot.character && (
-          <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
-            <MiniPill label="HP"  value={charSlot.character.statHp}    color={C.blood} />
-            <MiniPill label="SPD" value={charSlot.character.statSpeed} color={fc} />
-            <MiniPill label="DEF" value={charSlot.character.statDefense} color={C.muted} />
-          </div>
-        )}
+        {ch && (
+          <>
+            {/* art + name + stats row */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{
+                width: '72px', height: '72px', flexShrink: 0,
+                background: `linear-gradient(135deg, ${fc}22, ${C.bg2})`,
+                border: `1px solid ${fc}44`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {ch.art
+                  ? <img src={`/assets/characters/${ch.art}.png`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontFamily: DISPLAY, fontSize: '28px', color: `${fc}88` }}>{ch.name.charAt(0)}</span>
+                }
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ fontFamily: DISPLAY, fontSize: '22px', color: C.ink, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {ch.name}
+                </div>
+                <div style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.1em' }}>{ch.className}</div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <StatPill label="HP"  value={ch.statHp}      color={C.blood} />
+                  <StatPill label="SPD" value={ch.statSpeed}   color={fc} />
+                  <StatPill label="DEF" value={ch.statDefense} color={C.muted} />
+                </div>
+              </div>
+            </div>
 
-        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {([0, 1] as const).map(gi => (
-            <GearSlotPanel
-              key={gi}
-              slotLabel={`Gear ${gi + 1}`}
-              gearSlot={charSlot.gears[gi]}
-              gears={simData.gears}
-              skills={simData.skills}
-              onGearChange={gear => onGearChange(gi, gear)}
-              onSkillChange={(si, skill) => onSkillChange(gi, si, skill)}
-              accent={fc}
-            />
-          ))}
-        </div>
+            {/* HP bar preview */}
+            <HpBar current={ch.statHp} max={ch.statHp} color={C.green} />
+
+            {/* gears side by side — each fully independent */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              {([0, 1] as const).map(gi => (
+                <GearSlotPanel
+                  key={gi}
+                  slotLabel={`Gear ${gi + 1}`}
+                  gearSlot={charSlot.gears[gi]}
+                  gears={simData.gears}
+                  skills={simData.skills}
+                  onGearChange={gear => onGearChange(gi, gear)}
+                  onSkillChange={(si, skill) => onSkillChange(gi, si, skill)}
+                  accent={fc}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-// ── Enemy Wave Panel ───────────────────────────────────────────────────────────
+// ── Enemy Slot Card (config) ───────────────────────────────────────────────────
 
 function EnemySlotCard({
   slotIdx, enemySlot, enemies, enemySkills, onEnemyChange, onSkillChange,
@@ -428,10 +490,10 @@ function EnemySlotCard({
 }) {
   const en = enemySlot.enemy
   return (
-    <div style={{ border: `1px solid ${C.blood}33`, background: C.bg, padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ border: `1px solid ${C.blood}33`, background: C.bg, padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <div style={{ width: '3px', height: '3px', background: C.blood, transform: 'rotate(45deg)' }} />
-        <span style={{ fontFamily: MONO, fontSize: '8px', color: C.blood, letterSpacing: '0.15em' }}>ENEMY {slotIdx + 1}</span>
+        <span style={{ fontFamily: MONO, fontSize: '8px', color: C.blood, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Enemy {slotIdx + 1}</span>
       </div>
 
       <Selector
@@ -445,13 +507,13 @@ function EnemySlotCard({
       {en && (
         <>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            <MiniPill label="HP"  value={en.statHp}    color={C.blood} />
-            <MiniPill label="ATK" value={en.statAtk}   color={C.blood} />
-            <MiniPill label="DEF" value={en.statDef}   color={C.muted} />
-            <MiniPill label="SPD" value={en.statSpeed} color={C.gold} />
+            <StatPill label="HP"  value={en.statHp}    color={C.blood} />
+            <StatPill label="ATK" value={en.statAtk}   color={C.blood} />
+            <StatPill label="DEF" value={en.statDef}   color={C.muted} />
+            <StatPill label="SPD" value={en.statSpeed} color={C.gold} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Skills</span>
             {[0, 1, 2, 3].map(si => (
               <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -481,8 +543,8 @@ function EnemySlotCard({
 
 // ── Config helpers ─────────────────────────────────────────────────────────────
 
-function emptyGearSlot(): GearSlot { return { gear: null, skills: [null, null, null] } }
-function emptyCharSlot(): CharSlot { return { character: null, gears: [emptyGearSlot(), emptyGearSlot()] } }
+function emptyGearSlot(): GearSlot  { return { gear: null, skills: [null, null, null] } }
+function emptyCharSlot(): CharSlot  { return { character: null, gears: [emptyGearSlot(), emptyGearSlot()] } }
 function emptyEnemySlot(): EnemySlot { return { enemy: null, skills: [null, null, null, null] } }
 
 function buildInitialConfig(slotCount = 3, waveCount = 1): SimConfig {
@@ -496,11 +558,10 @@ function buildInitialConfig(slotCount = 3, waveCount = 1): SimConfig {
   }
 }
 
-// ── Combat engine ──────────────────────────────────────────────────────────────
+// ── Combat engine helpers ──────────────────────────────────────────────────────
 
 function buildCombatUnitsFromConfig(config: SimConfig): CombatUnit[] {
   const units: CombatUnit[] = []
-
   config.charSlots.forEach((slot, si) => {
     if (!slot.character) return
     const c = slot.character
@@ -514,22 +575,19 @@ function buildCombatUnitsFromConfig(config: SimConfig): CombatUnit[] {
       })
     })
 
-    const atk = slot.gears.reduce((sum, gs) => sum + (gs.gear?.statAttack ?? 0), 0)
-    const res = slot.gears.reduce((sum, gs) => sum + (gs.gear?.resourcePoolSize ?? 0), 0)
-    const regen = slot.gears.reduce((sum, gs) => sum + (gs.gear?.resourceRegenRate ?? 0), 0)
+    const atk   = slot.gears.reduce((s, gs) => s + (gs.gear?.statAttack ?? 0), 0)
+    const res   = slot.gears.reduce((s, gs) => s + (gs.gear?.resourcePoolSize ?? 0), 0)
+    const regen = slot.gears.reduce((s, gs) => s + (gs.gear?.resourceRegenRate ?? 0), 0)
 
     units.push({
       id: `player-${si}`,
       name: c.name,
       isEnemy: false,
-      hp: c.statHp,
-      maxHp: c.statHp,
+      hp: c.statHp, maxHp: c.statHp,
       speed: c.statSpeed,
       atk: atk || c.statFocus,
       def: c.statDefense,
-      resource: res,
-      maxResource: res,
-      resourceRegen: regen,
+      resource: res, maxResource: res, resourceRegen: regen,
       resourceName: slot.gears.find(gs => (gs.gear?.resourcePoolSize ?? 0) > 0)?.gear?.resourceName ?? 'RES',
       factionColor: c.factionColor,
       art: c.art,
@@ -537,169 +595,248 @@ function buildCombatUnitsFromConfig(config: SimConfig): CombatUnit[] {
       slotIndex: si,
     })
   })
-
   return units
 }
 
 function buildWaveUnits(wave: EnemyWave, waveIdx: number): CombatUnit[] {
-  return wave.slots
-    .filter(s => s.enemy !== null)
-    .map((slot, si) => {
-      const e = slot.enemy!
-      const skills: CombatSkill[] = slot.skills
-        .filter(Boolean)
-        .map(sk => ({ id: `es-${sk!.id}`, name: sk!.name, basePower: sk!.basePower, cost: 0 }))
-
-      return {
-        id: `enemy-w${waveIdx}-${si}`,
-        name: e.name,
-        isEnemy: true,
-        hp: e.statHp,
-        maxHp: e.statHp,
-        speed: e.statSpeed,
-        atk: e.statAtk,
-        def: e.statDef,
-        resource: 0,
-        maxResource: 0,
-        resourceRegen: 0,
-        resourceName: '',
-        factionColor: C.blood,
-        art: e.art,
-        skills,
-        slotIndex: si,
-        waveIndex: waveIdx,
-      }
-    })
+  return wave.slots.filter(s => s.enemy !== null).map((slot, si) => {
+    const e = slot.enemy!
+    const skills: CombatSkill[] = slot.skills
+      .filter(Boolean)
+      .map(sk => ({ id: `es-${sk!.id}`, name: sk!.name, basePower: sk!.basePower, cost: 0 }))
+    return {
+      id: `enemy-w${waveIdx}-${si}`,
+      name: e.name,
+      isEnemy: true,
+      hp: e.statHp, maxHp: e.statHp,
+      speed: e.statSpeed,
+      atk: e.statAtk, def: e.statDef,
+      resource: 0, maxResource: 0, resourceRegen: 0, resourceName: '',
+      factionColor: C.blood,
+      art: e.art,
+      skills,
+      slotIndex: si,
+      waveIndex: waveIdx,
+    }
+  })
 }
 
-function calcDamage(attacker: CombatUnit, skill: CombatSkill, defender: CombatUnit): { dmg: number; isCrit: boolean } {
-  const base = (attacker.atk + skill.basePower) - Math.floor(defender.def * 0.4)
-  const dmg = Math.max(1, Math.floor(base * (0.85 + Math.random() * 0.3)))
-  const critRoll = Math.random()
-  const isCrit = critRoll < 0.15
+function calcDamage(attacker: CombatUnit, skill: CombatSkill, defender: CombatUnit) {
+  const base  = (attacker.atk + skill.basePower) - Math.floor(defender.def * 0.4)
+  const dmg   = Math.max(1, Math.floor(base * (0.85 + Math.random() * 0.3)))
+  const isCrit = Math.random() < 0.15
   return { dmg: isCrit ? Math.floor(dmg * 1.6) : dmg, isCrit }
 }
 
-// ── HP Bar ─────────────────────────────────────────────────────────────────────
+// ── Inline HP bar (smooth fill) ────────────────────────────────────────────────
 
-function HpBar({ current, max, color }: { current: number; max: number; color: string }) {
+function SmootHpBar({ current, max, color }: { current: number; max: number; color: string }) {
   const pct = Math.max(0, Math.min(1, current / max))
-  const segments = 20
-  const filled = Math.round(pct * segments)
   return (
-    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '1px', flex: 1 }}>
-        {Array.from({ length: segments }).map((_, i) => (
-          <div key={i} style={{
-            flex: 1, height: '4px',
-            background: i < filled ? (i === filled - 1 ? color : `${color}88`) : C.bg2,
-            border: `1px solid ${i < filled ? `${color}44` : C.line}`,
-          }} />
-        ))}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.15em', flexShrink: 0, width: '14px' }}>HP</span>
+      <div style={{ flex: 1, height: '7px', background: C.bg3, border: `1px solid ${C.line}`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0, bottom: 0,
+          width: `${pct * 100}%`, background: color,
+          transition: 'width 0.45s ease, background 0.45s ease',
+        }} />
       </div>
-      <span style={{ fontFamily: MONO, fontSize: '8px', color, flexShrink: 0, marginLeft: '4px', minWidth: '60px', textAlign: 'right' }}>
-        {current}/{max}
+      <span style={{ fontFamily: MONO, fontSize: '8px', color, flexShrink: 0, minWidth: '56px', textAlign: 'right' }}>
+        {current}<span style={{ color: C.dim }}>/{max}</span>
       </span>
     </div>
   )
 }
 
-// ── Combat Unit Card ───────────────────────────────────────────────────────────
+// ── Enemy card — grid tile on top half ────────────────────────────────────────
 
-function CombatUnitCard({
-  unit, pendingSkill, onSkillSelect, phase,
+function EnemyBattleCard({
+  unit, isTargetable, isTargeted, isActive, onTargetClick,
 }: {
   unit: CombatUnit
-  pendingSkill: CombatSkill | null
-  onSkillSelect?: (skill: CombatSkill) => void
-  phase: BattlePhase | 'done'
+  isTargetable: boolean
+  isTargeted: boolean
+  isActive: boolean
+  onTargetClick?: () => void
 }) {
   const isDead = unit.hp <= 0
   const fc = unit.factionColor
+  const hpPct = Math.max(0, unit.hp / unit.maxHp)
+  const hpColor = hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood
 
   return (
-    <div style={{
-      border: `1px solid ${isDead ? C.line : fc}55`,
-      background: isDead ? C.bg : C.bg,
-      padding: '10px',
-      opacity: isDead ? 0.35 : 1,
-      transition: 'opacity 0.5s',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      <div style={{ height: '2px', background: `linear-gradient(90deg, ${isDead ? C.line : fc}, transparent)`, marginBottom: '8px' }} />
+    <div
+      onClick={() => isTargetable && !isDead && onTargetClick?.()}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+        padding: '14px 12px 12px',
+        background: isTargeted ? `${C.gold}0a` : isActive ? `${fc}0a` : C.bg2,
+        border: `2px solid ${isTargeted ? C.gold : isActive ? fc : C.lineStr}`,
+        cursor: isTargetable && !isDead ? 'pointer' : 'default',
+        opacity: isDead ? 0.28 : 1,
+        transition: 'all 0.2s ease',
+        boxShadow: isTargeted ? `0 0 20px ${C.gold}33` : isActive ? `0 0 16px ${fc}33` : 'none',
+        position: 'relative',
+      }}
+    >
+      {/* top accent */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+        background: `linear-gradient(90deg, ${isTargeted ? C.gold : isActive ? fc : C.line}, transparent)`,
+      }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+      {/* art — large, centered */}
+      <div style={{
+        width: '96px', height: '96px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+        filter: isDead
+          ? 'grayscale(1) opacity(0.3)'
+          : isTargeted
+            ? `drop-shadow(0 0 10px ${C.gold})`
+            : isActive
+              ? `drop-shadow(0 0 8px ${fc})`
+              : 'none',
+        transition: 'filter 0.2s',
+        transform: isTargeted ? 'scale(1.07)' : 'scale(1)',
+      }}>
+        {unit.art
+          ? <img src={`/assets/enemies/${unit.art}.png`} alt={unit.name}
+                 style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
+          : <span style={{ fontFamily: DISPLAY, fontSize: '40px', color: `${fc}77` }}>{unit.name.charAt(0)}</span>
+        }
+      </div>
+
+      {/* name */}
+      <div style={{ width: '100%', textAlign: 'center' }}>
         <div style={{
-          width: '28px', height: '28px', flexShrink: 0,
-          background: `linear-gradient(135deg, ${fc}22, ${C.bg2})`,
-          border: `1px solid ${fc}44`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: DISPLAY, fontSize: '16px', letterSpacing: '0.05em',
+          color: isDead ? C.dim : isActive ? fc : C.ink,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
-          {unit.art
-            ? <img src={`/assets/${unit.isEnemy ? 'enemies' : 'characters'}/${unit.art}.png`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontFamily: DISPLAY, fontSize: '14px', color: `${fc}88` }}>{unit.name.charAt(0)}</span>
-          }
+          {isDead ? '✕ ' : ''}{unit.name}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: DISPLAY, fontSize: '14px', color: isDead ? C.dim : C.ink, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {isDead ? '✕ ' : ''}{unit.name}
-          </div>
-          <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.15em' }}>
-            SPD:{unit.speed} ATK:{unit.atk} DEF:{unit.def}
-          </div>
+        <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.12em', marginTop: '1px' }}>
+          SPD {unit.speed} · ATK {unit.atk} · DEF {unit.def}
         </div>
       </div>
 
-      <HpBar current={unit.hp} max={unit.maxHp} color={unit.isEnemy ? C.blood : C.green} />
+      {/* HP bar */}
+      <div style={{ width: '100%' }}>
+        <SmootHpBar current={unit.hp} max={unit.maxHp} color={hpColor} />
+      </div>
 
-      {unit.maxResource > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
-          <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>{unit.resourceName}:</span>
-          <HpBar current={unit.resource} max={unit.maxResource} color={C.gold} />
-        </div>
-      )}
-
-      {/* Skill selection — players only, select phase */}
-      {!unit.isEnemy && !isDead && phase === 'select' && onSkillSelect && (
-        <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          {unit.skills.length === 0 ? (
-            <div style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, padding: '4px', textAlign: 'center', border: `1px dashed ${C.line}` }}>No skills</div>
-          ) : unit.skills.map(sk => {
-            const isPicked = pendingSkill?.id === sk.id
-            const canAfford = unit.maxResource === 0 || unit.resource >= sk.cost
-            return (
-              <button
-                key={sk.id}
-                onClick={() => canAfford && onSkillSelect(sk)}
-                disabled={!canAfford}
-                style={{
-                  padding: '5px 8px', background: isPicked ? `${fc}22` : C.bg2,
-                  border: `1px solid ${isPicked ? fc : C.line}`,
-                  color: isPicked ? fc : canAfford ? C.muted : C.dim,
-                  cursor: canAfford ? 'pointer' : 'not-allowed',
-                  fontFamily: MONO, fontSize: '9px', textAlign: 'left',
-                  display: 'flex', justifyContent: 'space-between',
-                  transition: 'all 0.1s',
-                  opacity: canAfford ? 1 : 0.45,
-                }}
-                onMouseEnter={e => { if (canAfford && !isPicked) e.currentTarget.style.borderColor = `${fc}66` }}
-                onMouseLeave={e => { if (!isPicked) e.currentTarget.style.borderColor = C.line }}
-              >
-                <span>{sk.name}</span>
-                <span style={{ color: C.gold }}>{sk.basePower}p {sk.cost > 0 ? `· ${sk.cost}${unit.resourceName.charAt(0)}` : ''}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Show selected skill */}
-      {!unit.isEnemy && !isDead && phase === 'select' && pendingSkill && (
+      {/* target cue */}
+      {isTargetable && !isDead && (
         <div style={{
-          marginTop: '4px', padding: '4px 8px', background: `${unit.factionColor}15`,
-          border: `1px solid ${unit.factionColor}44`, fontFamily: MONO, fontSize: '8px',
-          color: unit.factionColor, letterSpacing: '0.1em',
+          fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.14em',
+          padding: '3px 8px', border: `1px dashed ${C.gold}55`, background: `${C.gold}08`,
+        }}>
+          ◆ CLICK TO TARGET
+        </div>
+      )}
+      {isTargeted && !isTargetable && (
+        <div style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.14em' }}>▶ TARGETED</div>
+      )}
+    </div>
+  )
+}
+
+// ── Player battle card — bottom 3 fixed slots ──────────────────────────────────
+// Shows art + name + HP + resource. Skills shown in bottom dock, not on card.
+
+function PlayerBattleCard({
+  unit, isActive, pendingSkill,
+}: {
+  unit: CombatUnit
+  isActive: boolean
+  pendingSkill: CombatSkill | null
+}) {
+  const isDead = unit.hp <= 0
+  const fc = unit.factionColor
+  const hpPct = Math.max(0, unit.hp / unit.maxHp)
+  const hpColor = hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      padding: '12px',
+      background: isActive ? `${fc}0d` : C.bg2,
+      border: `2px solid ${isActive ? fc : C.lineStr}`,
+      transition: 'all 0.2s ease',
+      opacity: isDead ? 0.3 : 1,
+      boxShadow: isActive ? `0 0 16px ${fc}33` : 'none',
+      position: 'relative',
+      flex: 1,
+    }}>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+        background: `linear-gradient(90deg, ${isActive ? fc : C.line}, transparent)`,
+      }} />
+
+      {/* art + name row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{
+          width: '56px', height: '56px', flexShrink: 0,
+          border: `1px solid ${fc}44`,
+          background: `linear-gradient(135deg, ${fc}18, ${C.bg})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+          boxShadow: isActive ? `0 0 12px ${fc}44` : 'none',
+          transition: 'box-shadow 0.2s',
+        }}>
+          {unit.art
+            ? <img src={`/assets/characters/${unit.art}.png`} alt={unit.name}
+                   style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
+            : <span style={{ fontFamily: DISPLAY, fontSize: '24px', color: `${fc}77` }}>{unit.name.charAt(0)}</span>
+          }
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: DISPLAY, fontSize: '18px', letterSpacing: '0.04em',
+            color: isDead ? C.dim : C.ink,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {isDead ? '✕ ' : ''}{unit.name}
+          </div>
+          <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.12em', marginTop: '2px' }}>
+            SPD {unit.speed} · ATK {unit.atk} · DEF {unit.def}
+          </div>
+          {isActive && !isDead && (
+            <div style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.15em', marginTop: '3px' }}>
+              ▶ YOUR TURN
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* HP */}
+      <SmootHpBar current={unit.hp} max={unit.maxHp} color={hpColor} />
+
+      {/* Resource */}
+      {unit.maxResource > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, width: '14px' }}>
+            {unit.resourceName.slice(0, 2).toUpperCase()}
+          </span>
+          <div style={{ flex: 1, height: '5px', background: C.bg3, border: `1px solid ${C.line}`, position: 'relative', overflow: 'hidden' }}>
+            <div style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0,
+              width: `${(unit.resource / unit.maxResource) * 100}%`,
+              background: C.gold, transition: 'width 0.4s ease',
+            }} />
+          </div>
+          <span style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, minWidth: '28px', textAlign: 'right' }}>{unit.resource}/{unit.maxResource}</span>
+        </div>
+      )}
+
+      {/* selected skill indicator */}
+      {pendingSkill && isActive && (
+        <div style={{
+          padding: '4px 8px', background: `${fc}15`,
+          border: `1px solid ${fc}44`,
+          fontFamily: MONO, fontSize: '8px', color: fc, letterSpacing: '0.1em',
         }}>
           ▶ {pendingSkill.name}
         </div>
@@ -708,55 +845,100 @@ function CombatUnitCard({
   )
 }
 
-// ── Combat Log ────────────────────────────────────────────────────────────────
+// ── Turn order strip (horizontal) ─────────────────────────────────────────────
 
-const LOG_COLORS: Record<CombatLogEntry['type'], string> = {
-  action:  '#e8a736',
-  damage:  '#c53030',
-  miss:    '#5a5e66',
-  crit:    '#ff5555',
-  info:    '#5a8a6a',
-  wave:    '#9b59d4',
-  victory: '#6b8a3a',
-  defeat:  '#c53030',
-}
-
-function CombatLog({ entries }: { entries: CombatLogEntry[] }) {
-  const logRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [entries])
-
+function TurnStrip({ units, currentIdx }: { units: CombatUnit[]; currentIdx: number }) {
   return (
-    <div style={{ border: `1px solid ${C.line}`, background: C.bg, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{
-        padding: '6px 10px', borderBottom: `1px solid ${C.line}`,
-        fontFamily: MONO, fontSize: '8px', letterSpacing: '0.2em', color: C.dim, textTransform: 'uppercase',
-        background: C.bg2,
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '0',
+      background: C.bg2, borderBottom: `1px solid ${C.line}`, padding: '6px 14px',
+    }}>
+      <span style={{
+        fontFamily: MONO, fontSize: '7px', color: C.dim,
+        letterSpacing: '0.2em', textTransform: 'uppercase',
+        marginRight: '12px', flexShrink: 0,
       }}>
-        ◉ Combat Log
-      </div>
-      <div ref={logRef} style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-        {entries.length === 0 ? (
-          <div style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, textAlign: 'center', marginTop: '20px' }}>Awaiting combat...</div>
-        ) : entries.map((e, i) => (
-          <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, paddingTop: '1px' }}>T{e.turn}</span>
-            <span style={{ fontFamily: MONO, fontSize: '9px', color: LOG_COLORS[e.type], lineHeight: 1.4 }}>{e.text}</span>
-          </div>
-        ))}
+        ORDER
+      </span>
+      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1, alignItems: 'center' }}>
+        {units.map((u, i) => {
+          const isNow = i === currentIdx
+          const isDead = u.hp <= 0
+          return (
+            <div key={`${u.id}-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+              <div style={{
+                width: '34px', height: '34px',
+                border: `2px solid ${isNow ? u.factionColor : isDead ? C.line : `${u.factionColor}44`}`,
+                background: isNow ? `${u.factionColor}22` : C.bg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', opacity: isDead ? 0.25 : 1,
+                boxShadow: isNow ? `0 0 10px ${u.factionColor}66` : 'none',
+                transition: 'all 0.2s',
+              }}>
+                {u.art
+                  ? <img src={`/assets/${u.isEnemy ? 'enemies' : 'characters'}/${u.art}.png`} alt=""
+                         style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
+                  : <span style={{ fontFamily: DISPLAY, fontSize: '14px', color: `${u.factionColor}88` }}>{u.name.charAt(0)}</span>
+                }
+              </div>
+              {isNow && <div style={{ width: '4px', height: '4px', background: C.gold, borderRadius: '50%' }} />}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ── Simulator Config Panel ────────────────────────────────────────────────────
+// ── Combat Log ─────────────────────────────────────────────────────────────────
+
+const LOG_COLORS: Record<CombatLogEntry['type'], string> = {
+  action:  C.gold,
+  damage:  C.blood,
+  miss:    C.dim,
+  crit:    '#ff5555',
+  info:    '#5a8a6a',
+  wave:    '#9b59d4',
+  victory: C.green,
+  defeat:  C.blood,
+}
+
+function CombatLog({ entries }: { entries: CombatLogEntry[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
+  }, [entries])
+
+  return (
+    <div style={{ border: `1px solid ${C.lineStr}`, background: C.bg, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{
+        padding: '8px 12px', borderBottom: `1px solid ${C.line}`,
+        fontFamily: MONO, fontSize: '7px', letterSpacing: '0.25em', color: C.dim, textTransform: 'uppercase',
+        background: C.bg2, flexShrink: 0,
+      }}>
+        ◉ Combat Log
+      </div>
+      <div ref={ref} style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {entries.length === 0
+          ? <div style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, textAlign: 'center', marginTop: '40px' }}>Awaiting combat...</div>
+          : entries.map((e, i) => (
+            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, paddingTop: '1px', minWidth: '22px' }}>T{e.turn}</span>
+              <span style={{ fontFamily: MONO, fontSize: '10px', color: LOG_COLORS[e.type], lineHeight: 1.5 }}>{e.text}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Simulator Config Panel ─────────────────────────────────────────────────────
 
 export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => void }) {
-  const [simData, setSimData] = useState<SimData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [config, setConfig] = useState<SimConfig>(buildInitialConfig(3, 1))
+  const [simData, setSimData]   = useState<SimData | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [config, setConfig]     = useState<SimConfig>(buildInitialConfig(3, 1))
   const [activeWave, setActiveWave] = useState(0)
 
   useEffect(() => {
@@ -798,8 +980,7 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
     setConfig(prev => {
       const waves = prev.waves.map((wave, wi) => {
         if (wi !== waveIdx) return wave
-        const slots = wave.slots.map((slot, si) => si === slotIdx ? updater(slot) : slot)
-        return { slots }
+        return { slots: wave.slots.map((slot, si) => si === slotIdx ? updater(slot) : slot) }
       })
       return { ...prev, waves }
     })
@@ -820,12 +1001,12 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
     config.waves.some(wave => wave.slots.some(es => es.enemy !== null))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-      {/* ── Player Side ── */}
+      {/* Player Roster */}
       <div>
         <SectionHead label="Player Roster — 3 Character Slots" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(300px, 1fr))', gap: '16px' }}>
           {([0, 1, 2] as const).map(si => (
             <CharSlotPanel
               key={si}
@@ -850,7 +1031,7 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
         </div>
       </div>
 
-      {/* ── Enemy Side Config ── */}
+      {/* Enemy Config */}
       <div>
         <SectionHead label="Enemy Configuration" />
 
@@ -859,63 +1040,47 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
             <span style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, letterSpacing: '0.2em' }}>SLOTS PER WAVE:</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  onClick={() => updateEnemySlotCount(n)}
-                  style={{
-                    width: '28px', height: '28px',
-                    background: config.enemySlotCount === n ? C.blood : C.bg2,
-                    border: `1px solid ${config.enemySlotCount === n ? C.blood : C.line}`,
-                    color: config.enemySlotCount === n ? C.ink : C.dim,
-                    cursor: 'pointer', fontFamily: MONO, fontSize: '11px',
-                    transition: 'all 0.1s',
-                  }}
-                >{n}</button>
+                <button key={n} onClick={() => updateEnemySlotCount(n)} style={{
+                  width: '28px', height: '28px',
+                  background: config.enemySlotCount === n ? C.blood : C.bg2,
+                  border: `1px solid ${config.enemySlotCount === n ? C.blood : C.line}`,
+                  color: config.enemySlotCount === n ? C.ink : C.dim,
+                  cursor: 'pointer', fontFamily: MONO, fontSize: '11px', transition: 'all 0.1s',
+                }}>{n}</button>
               ))}
             </div>
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, letterSpacing: '0.2em' }}>WAVES:</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               {[1, 2, 3].map(n => (
-                <button
-                  key={n}
-                  onClick={() => updateWaveCount(n)}
-                  style={{
-                    width: '28px', height: '28px',
-                    background: config.waveCount === n ? C.blood : C.bg2,
-                    border: `1px solid ${config.waveCount === n ? C.blood : C.line}`,
-                    color: config.waveCount === n ? C.ink : C.dim,
-                    cursor: 'pointer', fontFamily: MONO, fontSize: '11px',
-                    transition: 'all 0.1s',
-                  }}
-                >{n}</button>
+                <button key={n} onClick={() => updateWaveCount(n)} style={{
+                  width: '28px', height: '28px',
+                  background: config.waveCount === n ? C.blood : C.bg2,
+                  border: `1px solid ${config.waveCount === n ? C.blood : C.line}`,
+                  color: config.waveCount === n ? C.ink : C.dim,
+                  cursor: 'pointer', fontFamily: MONO, fontSize: '11px', transition: 'all 0.1s',
+                }}>{n}</button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Wave tabs */}
         {config.waveCount > 1 && (
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
             {Array.from({ length: config.waveCount }).map((_, wi) => (
-              <button
-                key={wi}
-                onClick={() => setActiveWave(wi)}
-                style={{
-                  padding: '4px 12px', background: activeWave === wi ? `${C.blood}22` : C.bg2,
-                  border: `1px solid ${activeWave === wi ? C.blood : C.line}`,
-                  color: activeWave === wi ? C.blood : C.dim,
-                  cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.15em',
-                  transition: 'all 0.1s',
-                }}
-              >WAVE {wi + 1}</button>
+              <button key={wi} onClick={() => setActiveWave(wi)} style={{
+                padding: '4px 14px',
+                background: activeWave === wi ? `${C.blood}22` : C.bg2,
+                border: `1px solid ${activeWave === wi ? C.blood : C.line}`,
+                color: activeWave === wi ? C.blood : C.dim,
+                cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.15em', transition: 'all 0.1s',
+              }}>WAVE {wi + 1}</button>
             ))}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${config.enemySlotCount}, 1fr)`, gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${config.enemySlotCount}, minmax(220px, 1fr))`, gap: '12px' }}>
           {config.waves[activeWave]?.slots.map((slot, si) => (
             <EnemySlotCard
               key={si}
@@ -925,362 +1090,459 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
               enemySkills={simData.enemySkills}
               onEnemyChange={enemy => updateEnemySlot(activeWave, si, s => enemy ? { ...s, enemy } : emptyEnemySlot())}
               onSkillChange={(ski, skill) => updateEnemySlot(activeWave, si, s => {
-                const skills = [...s.skills]
-                skills[ski] = skill
-                return { ...s, skills }
+                const skills = [...s.skills]; skills[ski] = skill; return { ...s, skills }
               })}
             />
           ))}
         </div>
       </div>
 
-      {/* Start button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: `1px solid ${C.line}` }}>
+      {/* Start */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', paddingTop: '8px', borderTop: `1px solid ${C.line}` }}>
+        {!canStart && (
+          <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim }}>Need ≥1 character and ≥1 enemy</span>
+        )}
         <button
           onClick={() => canStart && onStart(config)}
           disabled={!canStart}
           style={{
-            padding: '12px 32px',
+            padding: '12px 36px',
             background: canStart ? C.gold : C.bg2,
             color: canStart ? '#0b0d10' : C.dim,
             border: `1px solid ${canStart ? C.gold : C.line}`,
             cursor: canStart ? 'pointer' : 'not-allowed',
-            fontFamily: DISPLAY, fontSize: '20px', letterSpacing: '0.08em',
-            transition: 'all 0.15s',
+            fontFamily: DISPLAY, fontSize: '22px', letterSpacing: '0.08em', transition: 'all 0.15s',
           }}
           onMouseEnter={e => { if (canStart) e.currentTarget.style.boxShadow = `0 0 20px ${C.gold}44` }}
           onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
         >
           INITIATE COMBAT
         </button>
-        {!canStart && (
-          <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, alignSelf: 'center', marginLeft: '12px' }}>
-            Need ≥1 player character and ≥1 enemy
-          </span>
-        )}
       </div>
     </div>
   )
 }
 
-// ── Combat Module ─────────────────────────────────────────────────────────────
+// ── Combat Module ──────────────────────────────────────────────────────────────
 
 type BattlePhase = 'select' | 'resolving' | 'wave-clear' | 'victory' | 'defeat'
 
-export function CombatModule({
-  config,
-  onRetry,
-  onReset,
-}: {
+export function CombatModule({ config, onRetry, onReset }: {
   config: SimConfig
   onRetry: () => void
   onReset: () => void
 }) {
-  const playerUnitsBase = buildCombatUnitsFromConfig(config)
-
-  const [players, setPlayers] = useState<CombatUnit[]>(() =>
-    playerUnitsBase.map(u => ({ ...u }))
-  )
-  const [enemies, setEnemies] = useState<CombatUnit[]>(() =>
-    buildWaveUnits(config.waves[0], 0)
-  )
+  const [players, setPlayers]     = useState<CombatUnit[]>(() => buildCombatUnitsFromConfig(config))
+  const [enemies, setEnemies]     = useState<CombatUnit[]>(() => buildWaveUnits(config.waves[0], 0))
   const [currentWave, setCurrentWave] = useState(0)
-  const [phase, setPhase] = useState<BattlePhase>('select')
-  const [turn, setTurn] = useState(1)
-  const [pendingSkills, setPendingSkills] = useState<Record<string, CombatSkill | null>>({})
-  const [log, setLog] = useState<CombatLogEntry[]>([{ turn: 0, text: `Wave 1 begins. Select skills for your characters.`, type: 'wave' }])
-
+  const [phase, setPhase]         = useState<BattlePhase>('select')
+  const [turn, setTurn]           = useState(1)
+  const [turnOrder, setTurnOrder] = useState<CombatUnit[]>([])
+  const [actorIdx, setActorIdx]   = useState(0)
+  const [pendingSkill, setPendingSkill]   = useState<CombatSkill | null>(null)
+  const [targetId, setTargetId]   = useState<string | null>(null)
+  const [log, setLog]             = useState<CombatLogEntry[]>([
+    { turn: 0, text: 'Wave 1 begins.', type: 'wave' },
+  ])
   const resolving = useRef(false)
 
-  function addLog(text: string, type: CombatLogEntry['type']) {
-    setLog(prev => [...prev, { turn, text, type }])
-  }
+  const pushLog = useCallback((text: string, type: CombatLogEntry['type'], t: number) => {
+    setLog(prev => [...prev, { turn: t, text, type }])
+  }, [])
 
-  function allPlayersDead(units: CombatUnit[]) { return units.every(u => u.hp <= 0) }
-  function allEnemiesDead(units: CombatUnit[]) { return units.every(u => u.hp <= 0) }
+  // Build sorted turn order from alive units
+  const buildOrder = useCallback((p: CombatUnit[], e: CombatUnit[]) =>
+    [...p.filter(u => u.hp > 0), ...e.filter(u => u.hp > 0)]
+      .sort((a, b) => b.speed - a.speed)
+  , [])
 
-  const alivePlayers = players.filter(u => u.hp > 0)
-  const aliveEnemies = enemies.filter(u => u.hp > 0)
+  // Initialize turn order once on mount and when wave changes
+  useEffect(() => {
+    if (turnOrder.length === 0) {
+      setTurnOrder(buildOrder(players, enemies))
+      setActorIdx(0)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Check if all alive players have picked a skill
-  const allPicked = alivePlayers.length > 0 && alivePlayers.every(u => pendingSkills[u.id] !== undefined && pendingSkills[u.id] !== null)
+  const currentActor = turnOrder[actorIdx] ?? null
+  const isPlayerTurn = currentActor !== null && !currentActor.isEnemy
 
-  async function delay(ms: number) { return new Promise(res => setTimeout(res, ms)) }
-
-  const resolveTurn = useCallback(async () => {
+  // When it's an enemy turn, auto-select skill and resolve after a short delay
+  useEffect(() => {
+    if (phase !== 'select' || !currentActor || isPlayerTurn) return
     if (resolving.current) return
+
+    const timer = setTimeout(() => {
+      const availSkills = currentActor.skills.filter(s => s.basePower > 0)
+      const autoSkill: CombatSkill = availSkills.length > 0
+        ? availSkills[Math.floor(Math.random() * availSkills.length)]
+        : { id: 'basic', name: 'Strike', basePower: Math.floor(currentActor.atk * 0.5), cost: 0 }
+      setPendingSkill(autoSkill)
+    }, 600)
+
+    return () => clearTimeout(timer)
+  }, [phase, currentActor, isPlayerTurn])
+
+  // When enemy has a skill assigned, auto-resolve
+  useEffect(() => {
+    if (phase !== 'select' || !currentActor || isPlayerTurn || !pendingSkill) return
+    doResolve(pendingSkill, null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSkill, isPlayerTurn])
+
+  async function doResolve(skill: CombatSkill, chosenTarget: string | null) {
+    if (resolving.current || !currentActor) return
     resolving.current = true
     setPhase('resolving')
 
-    // Build turn order: players + enemies sorted by speed desc
-    const playerSnap = [...players]
-    const enemySnap = [...enemies]
+    const currentTurn = turn
+    let pState = players.map(u => ({ ...u }))
+    let eState = enemies.map(u => ({ ...u }))
 
-    const aliveP = playerSnap.filter(u => u.hp > 0)
-    const aliveE = enemySnap.filter(u => u.hp > 0)
-
-    // Enemy AI: pick random skill or basic attack
-    const enemyMoves: Record<string, CombatSkill> = {}
-    for (const e of aliveE) {
-      const availSkills = e.skills.filter(s => s.basePower > 0)
-      if (availSkills.length > 0) {
-        enemyMoves[e.id] = availSkills[Math.floor(Math.random() * availSkills.length)]
-      } else {
-        enemyMoves[e.id] = { id: 'basic', name: 'Strike', basePower: Math.floor(e.atk * 0.5), cost: 0 }
-      }
+    const actor = (currentActor.isEnemy ? eState : pState).find(u => u.id === currentActor.id)
+    if (!actor || actor.hp <= 0) {
+      advance(pState, eState, currentTurn)
+      return
     }
 
-    const allActors = [
-      ...aliveP.map(u => ({ unit: u, isPlayer: true })),
-      ...aliveE.map(u => ({ unit: u, isPlayer: false })),
-    ].sort((a, b) => b.unit.speed - a.unit.speed)
+    // Pick target
+    const pool = currentActor.isEnemy ? pState.filter(u => u.hp > 0) : eState.filter(u => u.hp > 0)
+    const target = chosenTarget
+      ? pool.find(u => u.id === chosenTarget) ?? pool[Math.floor(Math.random() * pool.length)]
+      : pool[Math.floor(Math.random() * pool.length)]
 
-    let pState = playerSnap.map(u => ({ ...u }))
-    let eState = enemySnap.map(u => ({ ...u }))
-
-    function getUnit(id: string, state: CombatUnit[]) { return state.find(u => u.id === id) }
-    function updateUnit(id: string, update: Partial<CombatUnit>, state: CombatUnit[]) {
-      return state.map(u => u.id === id ? { ...u, ...update } : u)
+    if (!target) {
+      advance(pState, eState, currentTurn)
+      return
     }
 
-    for (const actor of allActors) {
-      const currentState = actor.isPlayer ? pState : eState
-      const current = getUnit(actor.unit.id, currentState)
-      if (!current || current.hp <= 0) continue
+    const { dmg, isCrit } = calcDamage(actor, skill, target)
+    pushLog(
+      `${actor.name} uses ${skill.name} on ${target.name} → ${dmg} dmg${isCrit ? ' [CRIT]' : ''}`,
+      isCrit ? 'crit' : 'damage',
+      currentTurn,
+    )
 
-      const skill = actor.isPlayer ? pendingSkills[actor.unit.id] : enemyMoves[actor.unit.id]
-      if (!skill) continue
-
-      // Pick target — player attacks random alive enemy, enemy attacks random alive player
-      const targets = actor.isPlayer
-        ? eState.filter(u => u.hp > 0)
-        : pState.filter(u => u.hp > 0)
-      if (targets.length === 0) break
-
-      const target = targets[Math.floor(Math.random() * targets.length)]
-      const { dmg, isCrit } = calcDamage(current, skill, target)
-
-      // Log
-      const logType: CombatLogEntry['type'] = isCrit ? 'crit' : 'damage'
-      const critTag = isCrit ? ' [CRIT]' : ''
-      setLog(prev => [...prev, {
-        turn,
-        text: `${current.name} uses ${skill.name} on ${target.name} → ${dmg} dmg${critTag}`,
-        type: logType,
-      }])
-
-      // Apply damage
-      const newHp = Math.max(0, target.hp - dmg)
-      if (actor.isPlayer) {
-        eState = updateUnit(target.id, { hp: newHp }, eState)
-        setEnemies([...eState])
-      } else {
-        pState = updateUnit(target.id, { hp: newHp }, pState)
+    const newHp = Math.max(0, target.hp - dmg)
+    if (currentActor.isEnemy) {
+      pState = pState.map(u => u.id === target.id ? { ...u, hp: newHp } : u)
+      setPlayers([...pState])
+    } else {
+      eState = eState.map(u => u.id === target.id ? { ...u, hp: newHp } : u)
+      setEnemies([...eState])
+      // resource regen
+      if (actor.maxResource > 0) {
+        const newRes = Math.min(actor.maxResource, actor.resource + actor.resourceRegen - (skill.cost ?? 0))
+        pState = pState.map(u => u.id === actor.id ? { ...u, resource: newRes } : u)
         setPlayers([...pState])
       }
-
-      // Regen resource for player
-      if (actor.isPlayer && current.maxResource > 0) {
-        const newRes = Math.min(current.maxResource, current.resource + current.resourceRegen - (skill.cost ?? 0))
-        pState = updateUnit(current.id, { resource: newRes }, pState)
-        setPlayers([...pState])
-      }
-
-      await delay(2000)
-
-      if (allEnemiesDead(eState)) break
-      if (allPlayersDead(pState)) break
     }
 
-    setPlayers([...pState])
-    setEnemies([...eState])
-    setPendingSkills({})
-    setTurn(t => t + 1)
+    await new Promise(r => setTimeout(r, 1400))
+    advance(pState, eState, currentTurn)
+  }
 
-    if (allPlayersDead(pState)) {
-      setLog(prev => [...prev, { turn: turn + 1, text: '— ALL UNITS ELIMINATED — Combat lost.', type: 'defeat' }])
+  function advance(pState: CombatUnit[], eState: CombatUnit[], currentTurn: number) {
+    setPendingSkill(null)
+    setTargetId(null)
+
+    const allPDead = pState.every(u => u.hp <= 0)
+    const allEDead = eState.every(u => u.hp <= 0)
+
+    if (allPDead) {
+      pushLog('— ALL UNITS ELIMINATED — Defeat.', 'defeat', currentTurn)
       setPhase('defeat')
       resolving.current = false
       return
     }
 
-    if (allEnemiesDead(eState)) {
-      const nextWave = currentWave + 1
-      if (nextWave < config.waveCount && nextWave < config.waves.length) {
-        setLog(prev => [...prev, { turn: turn + 1, text: `Wave ${currentWave + 1} cleared! Wave ${nextWave + 1} incoming...`, type: 'wave' }])
+    if (allEDead) {
+      const next = currentWave + 1
+      if (next < config.waveCount && next < config.waves.length) {
+        pushLog(`Wave ${currentWave + 1} cleared! Wave ${next + 1} incoming...`, 'wave', currentTurn)
         setPhase('wave-clear')
-        await delay(1500)
-        const newWaveEnemies = buildWaveUnits(config.waves[nextWave], nextWave)
-        setEnemies(newWaveEnemies)
-        setCurrentWave(nextWave)
-        setLog(prev => [...prev, { turn: turn + 1, text: `Wave ${nextWave + 1} begins!`, type: 'wave' }])
-        setPhase('select')
+        setTimeout(() => {
+          const newEnemies = buildWaveUnits(config.waves[next], next)
+          setEnemies(newEnemies)
+          setCurrentWave(next)
+          const newTurn = currentTurn + 1
+          setTurn(newTurn)
+          const newOrder = buildOrder(pState, newEnemies)
+          setTurnOrder(newOrder)
+          setActorIdx(0)
+          pushLog(`Wave ${next + 1} begins.`, 'wave', newTurn)
+          setPhase('select')
+          resolving.current = false
+        }, 1400)
       } else {
-        setLog(prev => [...prev, { turn: turn + 1, text: '— ALL WAVES CLEARED — Victory!', type: 'victory' }])
+        pushLog('— ALL WAVES CLEARED — Victory!', 'victory', currentTurn)
         setPhase('victory')
+        resolving.current = false
       }
-      resolving.current = false
       return
+    }
+
+    // Advance to next actor
+    const nextIdx = actorIdx + 1
+    if (nextIdx >= turnOrder.length) {
+      const newTurn = currentTurn + 1
+      setTurn(newTurn)
+      const newOrder = buildOrder(pState, eState)
+      setTurnOrder(newOrder)
+      setActorIdx(0)
+      pushLog(`— Turn ${newTurn} begins —`, 'info', newTurn)
+    } else {
+      setActorIdx(nextIdx)
     }
 
     setPhase('select')
     resolving.current = false
-  }, [players, enemies, pendingSkills, turn, currentWave, config])
+  }
+
+  const canExecute = isPlayerTurn && !!pendingSkill && phase === 'select'
+
+  // Latest log entry for the dialog box
+  const lastLog = log[log.length - 1]
+
+  // Active player unit (for skill panel)
+  const activePlayer = isPlayerTurn && currentActor ? players.find(p => p.id === currentActor.id) ?? null : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.3s ease' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', background: C.bg, border: `1px solid ${C.lineStr}` }}>
 
-      {/* Phase / Wave banner */}
+      {/* ── Top bar: wave / turn / controls ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '8px 12px', background: C.bg2, border: `1px solid ${C.line}`,
+        padding: '8px 14px', background: C.bg2, borderBottom: `1px solid ${C.line}`,
       }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           <span style={{ fontFamily: DISPLAY, fontSize: '22px', letterSpacing: '0.06em', color: C.gold }}>
             WAVE {currentWave + 1}/{config.waveCount}
           </span>
-          <span style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, letterSpacing: '0.2em' }}>TURN {turn}</span>
+          <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em' }}>T{turn}</span>
+          {(phase === 'victory' || phase === 'defeat') && (
+            <span style={{ fontFamily: DISPLAY, fontSize: '22px', letterSpacing: '0.06em', color: phase === 'victory' ? C.green : C.blood }}>
+              {phase === 'victory' ? '★ VICTORY' : '✕ DEFEAT'}
+            </span>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <div style={{
-            padding: '4px 10px', border: `1px solid ${
-              phase === 'select' ? C.gold :
-              phase === 'resolving' ? C.blood :
-              phase === 'victory' ? C.green :
-              phase === 'defeat' ? C.blood : C.muted
-            }44`,
-            fontFamily: MONO, fontSize: '8px', letterSpacing: '0.2em',
-            color: phase === 'select' ? C.gold : phase === 'resolving' ? C.blood : phase === 'victory' ? C.green : phase === 'defeat' ? C.blood : C.muted,
-          }}>
-            {phase === 'select' ? '◉ SELECT SKILLS' :
-             phase === 'resolving' ? '▶ RESOLVING...' :
-             phase === 'wave-clear' ? '◈ WAVE CLEARED' :
-             phase === 'victory' ? '★ VICTORY' : '✕ DEFEAT'}
-          </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button onClick={onRetry} style={{
+            padding: '5px 14px', background: C.bg, border: `1px solid ${C.lineStr}`,
+            color: C.muted, cursor: 'pointer', fontFamily: MONO, fontSize: '8px', letterSpacing: '0.12em', transition: 'all 0.1s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.lineStr; e.currentTarget.style.color = C.muted }}
+          >↩ RETRY</button>
+          <button onClick={onReset} style={{
+            padding: '5px 14px', background: C.bg, border: `1px solid ${C.blood}44`,
+            color: C.blood, cursor: 'pointer', fontFamily: MONO, fontSize: '8px', letterSpacing: '0.12em', transition: 'all 0.1s', opacity: 0.7,
+          }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '0.7' }}
+          >✕ RESET</button>
         </div>
       </div>
 
-      {/* Battle area: players | enemies | log */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 280px', gap: '12px', minHeight: '400px' }}>
+      {/* ── Turn order strip ── */}
+      <TurnStrip units={turnOrder} currentIdx={actorIdx} />
 
-        {/* Player side */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.25em', color: C.green, textTransform: 'uppercase', marginBottom: '2px' }}>
-            ◉ Player Squad
-          </div>
-          {players.map(u => (
-            <CombatUnitCard
-              key={u.id}
-              unit={u}
-              pendingSkill={pendingSkills[u.id] ?? null}
-              phase={phase}
-              onSkillSelect={sk => setPendingSkills(prev => ({ ...prev, [u.id]: sk }))}
-            />
-          ))}
-        </div>
+      {/* ── Arena ── */}
+      <div style={{
+        position: 'relative',
+        background: `linear-gradient(180deg, #0c0e14 0%, #080a0e 55%, #0e1018 55%, #0a0c10 100%)`,
+        height: '340px',
+        display: 'flex', alignItems: 'stretch',
+        overflow: 'hidden',
+        borderBottom: `1px solid ${C.line}`,
+      }}>
+        {/* ground line */}
+        <div style={{ position: 'absolute', left: 0, right: 0, top: '55%', height: '1px', background: C.line }} />
 
-        {/* Enemy side */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.25em', color: C.blood, textTransform: 'uppercase', marginBottom: '2px' }}>
+        {/* ── Enemy side: HP boxes top-left, sprites top-right ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '16px 12px 0 16px', gap: '8px', zIndex: 1 }}>
+          <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '2px' }}>
             ◈ Enemy Force
           </div>
           {enemies.map(u => (
-            <CombatUnitCard
+            <PokeHpBox
               key={u.id}
               unit={u}
-              pendingSkill={null}
-              phase={phase}
+              isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
+              isTargeted={targetId === u.id}
+              isActive={currentActor?.id === u.id && currentActor.isEnemy}
+              onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
             />
           ))}
         </div>
 
-        {/* Log */}
-        <CombatLog entries={log} />
-      </div>
-
-      {/* Action bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: C.bg2, border: `1px solid ${C.line}` }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={onRetry}
-            style={{
-              padding: '8px 20px', background: C.bg, border: `1px solid ${C.lineStr}`,
-              color: C.muted, cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.15em',
-              transition: 'all 0.1s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.lineStr; e.currentTarget.style.color = C.muted }}
-          >
-            ↩ RETRY
-          </button>
-          <button
-            onClick={onReset}
-            style={{
-              padding: '8px 20px', background: C.bg, border: `1px solid ${C.blood}44`,
-              color: C.blood, cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.15em',
-              transition: 'all 0.1s', opacity: 0.7,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '0.7' }}
-          >
-            ✕ RESET CONFIG
-          </button>
+        {/* Enemy sprites top-right */}
+        <div style={{ position: 'absolute', right: '10%', top: '6%', display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
+          {enemies.map(u => (
+            <ArenaBattler
+              key={u.id}
+              unit={u}
+              side="front"
+              isActive={currentActor?.id === u.id && currentActor.isEnemy}
+              isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
+              isTargeted={targetId === u.id}
+              onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
+            />
+          ))}
         </div>
 
-        {phase === 'select' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {!allPicked && alivePlayers.length > 0 && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim }}>
-                {alivePlayers.filter(u => pendingSkills[u.id]).length}/{alivePlayers.length} ready
+        {/* Player sprites bottom-left */}
+        <div style={{ position: 'absolute', left: '6%', bottom: '10%', display: 'flex', gap: '20px', alignItems: 'flex-end' }}>
+          {players.map(u => (
+            <ArenaBattler
+              key={u.id}
+              unit={u}
+              side="back"
+              isActive={currentActor?.id === u.id && !currentActor.isEnemy}
+              isTargetable={false}
+              isTargeted={false}
+            />
+          ))}
+        </div>
+
+        {/* ── Player HP boxes bottom-right ── */}
+        <div style={{ position: 'absolute', right: '14px', bottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+          {players.map(u => (
+            <PokeHpBox
+              key={u.id}
+              unit={u}
+              isTargetable={false}
+              isTargeted={false}
+              isActive={currentActor?.id === u.id && !currentActor.isEnemy}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom dock: dialog + skills ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '160px' }}>
+
+        {/* Dialog box (left) */}
+        <div style={{
+          borderRight: `1px solid ${C.line}`, borderTop: `1px solid ${C.line}`,
+          padding: '18px 22px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          background: C.bg,
+        }}>
+          <div>
+            {/* latest log line shown large like Pokémon dialog */}
+            {lastLog && (
+              <p style={{ fontFamily: MONO, fontSize: '13px', color: C.ink, lineHeight: 1.6, margin: 0 }}>
+                {lastLog.text}
+              </p>
+            )}
+          </div>
+
+          {/* scroll hint / phase label */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+            {phase === 'select' && isPlayerTurn && currentActor && (
+              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.1em' }}>
+                <span style={{ color: currentActor.factionColor }}>{currentActor.name}</span>
+                {pendingSkill && <span style={{ color: C.gold }}> · {pendingSkill.name}</span>}
+                {targetId && <span style={{ color: C.gold }}> → {enemies.find(e => e.id === targetId)?.name ?? '?'}</span>}
               </span>
             )}
-            <button
-              onClick={() => allPicked && resolveTurn()}
-              disabled={!allPicked}
-              style={{
-                padding: '10px 28px',
-                background: allPicked ? C.gold : C.bg,
-                color: allPicked ? '#0b0d10' : C.dim,
-                border: `1px solid ${allPicked ? C.gold : C.line}`,
-                cursor: allPicked ? 'pointer' : 'not-allowed',
-                fontFamily: DISPLAY, fontSize: '18px', letterSpacing: '0.06em',
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { if (allPicked) e.currentTarget.style.boxShadow = `0 0 16px ${C.gold}44` }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
-            >
-              PLAY TURN
-            </button>
+            {phase === 'select' && !isPlayerTurn && currentActor && (
+              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim }}>
+                <span style={{ color: C.blood }}>{currentActor.name}</span> is acting...
+              </span>
+            )}
+            {phase === 'resolving' && (
+              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em' }}>▶▶</span>
+            )}
+            {(phase === 'victory' || phase === 'defeat') && <span />}
+            {/* log scroll indicator */}
+            <span style={{ fontFamily: MONO, fontSize: '10px', color: C.dim }}>▼</span>
           </div>
-        )}
+        </div>
 
-        {(phase === 'victory' || phase === 'defeat') && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{
-              fontFamily: DISPLAY, fontSize: '24px', letterSpacing: '0.06em',
-              color: phase === 'victory' ? C.green : C.blood,
-            }}>
-              {phase === 'victory' ? '★ VICTORY' : '✕ DEFEAT'}
-            </span>
-          </div>
-        )}
-
-        {phase === 'resolving' && (
-          <span style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, letterSpacing: '0.2em', animation: 'none' }}>
-            ▶▶ RESOLVING TURN...
-          </span>
-        )}
+        {/* Skill / action panel (right — shown on player turn, else log) */}
+        <div style={{ borderTop: `1px solid ${C.line}`, background: C.bg2 }}>
+          {phase === 'select' && activePlayer && activePlayer.hp > 0
+            ? (
+              <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>What will {activePlayer.name} do?</span>
+                  <button
+                    onClick={() => canExecute && doResolve(pendingSkill!, targetId)}
+                    disabled={!canExecute}
+                    style={{
+                      padding: '6px 20px',
+                      background: canExecute ? C.gold : C.bg,
+                      color: canExecute ? '#0b0d10' : C.dim,
+                      border: `1px solid ${canExecute ? C.gold : C.line}`,
+                      cursor: canExecute ? 'pointer' : 'not-allowed',
+                      fontFamily: DISPLAY, fontSize: '16px', letterSpacing: '0.06em', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { if (canExecute) e.currentTarget.style.boxShadow = `0 0 12px ${C.gold}44` }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
+                  >
+                    FIGHT
+                  </button>
+                </div>
+                {/* skill grid — 2 cols */}
+                {activePlayer.skills.length === 0
+                  ? <div style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, textAlign: 'center', padding: '16px', border: `1px dashed ${C.line}` }}>No skills</div>
+                  : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', flex: 1 }}>
+                      {activePlayer.skills.map(sk => {
+                        const isPicked  = pendingSkill?.id === sk.id
+                        const canAfford = activePlayer.maxResource === 0 || activePlayer.resource >= sk.cost
+                        const fc = activePlayer.factionColor
+                        return (
+                          <button
+                            key={sk.id}
+                            onClick={() => canAfford && setPendingSkill(sk)}
+                            disabled={!canAfford}
+                            style={{
+                              padding: '10px 12px',
+                              background: isPicked ? `${fc}22` : C.bg,
+                              border: `2px solid ${isPicked ? fc : C.line}`,
+                              color: isPicked ? fc : canAfford ? C.ink : C.dim,
+                              cursor: canAfford ? 'pointer' : 'not-allowed',
+                              fontFamily: MONO, fontSize: '10px', textAlign: 'left',
+                              display: 'flex', flexDirection: 'column', gap: '2px',
+                              transition: 'all 0.1s',
+                              opacity: canAfford ? 1 : 0.35,
+                            }}
+                            onMouseEnter={e => { if (canAfford && !isPicked) e.currentTarget.style.borderColor = `${fc}88` }}
+                            onMouseLeave={e => { if (!isPicked) e.currentTarget.style.borderColor = C.line }}
+                          >
+                            <span style={{ fontFamily: DISPLAY, fontSize: '15px', letterSpacing: '0.04em' }}>{sk.name}</span>
+                            <span style={{ color: C.gold, fontSize: '8px' }}>
+                              PWR {sk.basePower}{sk.cost > 0 ? ` · ${sk.cost}${activePlayer.resourceName.charAt(0)}` : ''}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                }
+              </div>
+            )
+            : (
+              /* Log panel when not player's skill-select turn */
+              <CombatLog entries={log} />
+            )
+          }
+        </div>
       </div>
     </div>
   )
 }
 
-// ── Battle Sim Root ───────────────────────────────────────────────────────────
+// ── Battle Sim Root ────────────────────────────────────────────────────────────
 
 type SimView = 'config' | 'combat'
 
 export function BattleSimulator() {
-  const [view, setView] = useState<SimView>('config')
+  const [view, setView]               = useState<SimView>('config')
   const [activeConfig, setActiveConfig] = useState<SimConfig | null>(null)
 
   function handleStart(config: SimConfig) {
@@ -1289,7 +1551,6 @@ export function BattleSimulator() {
   }
 
   function handleRetry() {
-    // Keep config, restart combat
     if (activeConfig) {
       setActiveConfig({ ...activeConfig })
       setView('combat')
@@ -1305,11 +1566,7 @@ export function BattleSimulator() {
     <div>
       {view === 'config' && <SimulatorConfig onStart={handleStart} />}
       {view === 'combat' && activeConfig && (
-        <CombatModule
-          config={activeConfig}
-          onRetry={handleRetry}
-          onReset={handleReset}
-        />
+        <CombatModule config={activeConfig} onRetry={handleRetry} onReset={handleReset} />
       )}
     </div>
   )
