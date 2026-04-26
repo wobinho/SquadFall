@@ -13,6 +13,8 @@ export interface GearRow {
   art:              string | null
   category:         string
   subcategory:      string
+  rarity:           string
+  rarityColor:      string
   statAttack:       number
   critDamage:       number
   critChance:       number

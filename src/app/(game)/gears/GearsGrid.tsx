@@ -66,6 +66,7 @@ function CornerBrackets({ color, size = 12, gap = 6 }: { color: string; size?: n
 
 function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void }) {
   const accentColor = categoryColor[gear.category] ?? colors.warn
+  const rc = gear.rarityColor
   const fallback = gear.name.charAt(0).toUpperCase()
 
   return (
@@ -73,7 +74,7 @@ function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 50,
-        background: 'rgba(11,13,16,0.88)',
+        background: 'rgba(11,13,16,0.92)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
@@ -82,26 +83,37 @@ function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void
         style={{
           width: 1040,
           background: `linear-gradient(180deg, ${colors.bg3} 0%, ${colors.bg4} 100%)`,
-          border: `1px solid ${colors.line}`,
+          border: `1px solid ${rc}55`,
           display: 'flex', flexDirection: 'row',
           overflow: 'hidden',
-          boxShadow: `0 0 0 1px ${accentColor}22, 0 32px 80px -16px rgba(0,0,0,0.8)`,
+          boxShadow: `0 0 0 1px ${rc}22, 0 0 60px ${rc}22, 0 32px 80px -16px rgba(0,0,0,0.9)`,
           maxHeight: '90vh',
         }}
       >
         {/* LEFT PANEL */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: `1px solid ${colors.line}` }}>
-          {/* accent bar — doubled thickness, glowing */}
-          <div style={{ height: '3px', background: `linear-gradient(90deg, ${accentColor}, ${accentColor}44, transparent)`, boxShadow: `0 0 12px ${accentColor}88` }} />
+          {/* rarity accent bar — solid rarity color full width with glow */}
+          <div style={{ height: '4px', background: `linear-gradient(90deg, ${rc}bb, ${rc}, ${rc}bb)`, boxShadow: `0 0 16px ${rc}cc, 0 0 32px ${rc}66` }} />
 
           {/* header */}
-          <div style={{ padding: '14px 16px 12px', borderBottom: `1px solid ${colors.line}`, background: `linear-gradient(180deg, ${accentColor}06 0%, transparent 100%)`, position: 'relative' }}>
-            {/* category tag */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <div style={{ width: '3px', height: '3px', background: accentColor, transform: 'rotate(45deg)' }} />
-              <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: accentColor }}>
-                {gear.category} · {gear.subcategory}
-              </span>
+          <div style={{ padding: '14px 16px 12px', borderBottom: `1px solid ${colors.line}`, background: `linear-gradient(180deg, ${rc}0a 0%, transparent 100%)`, position: 'relative' }}>
+            {/* category + rarity tag */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '3px', height: '3px', background: accentColor, transform: 'rotate(45deg)' }} />
+                <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: accentColor }}>
+                  {gear.category} · {gear.subcategory}
+                </span>
+              </div>
+              <div style={{
+                fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase',
+                color: '#0a0c10', border: `1px solid ${rc}`, padding: '2px 8px',
+                background: rc,
+                boxShadow: `0 0 10px ${rc}88`,
+                fontWeight: 700,
+              }}>
+                {gear.rarity}
+              </div>
             </div>
             {/* name + level row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
@@ -138,12 +150,12 @@ function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void
                 </div>
               )
             }
-            {/* layered overlays: bottom fade + side vignette */}
-            <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `linear-gradient(180deg, ${accentColor}08 0%, transparent 30%, rgba(10,12,16,0.85) 100%)` }} />
-            <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55))' }} />
-            {/* horizontal scan line */}
-            <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: '40%', height: '1px', background: `linear-gradient(90deg, transparent, ${accentColor}30, transparent)`, pointerEvents: 'none' }} />
-            <CornerBrackets color={`${accentColor}cc`} size={16} gap={8} />
+            {/* rarity color bottom bleed — replaces dark fade */}
+            <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `linear-gradient(180deg, transparent 40%, ${rc}44 100%)` }} />
+            <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45))' }} />
+            {/* rarity horizontal scan line */}
+            <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, top: '40%', height: '1px', background: `linear-gradient(90deg, transparent, ${rc}55, transparent)`, pointerEvents: 'none' }} />
+            <CornerBrackets color={`${rc}ee`} size={16} gap={8} />
           </div>
 
           {/* stats */}
@@ -288,8 +300,8 @@ function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void
 
         {/* RIGHT PANEL */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* accent bar */}
-          <div style={{ height: '4px', background: accentColor }} />
+          {/* rarity accent bar matching left panel */}
+          <div style={{ height: '4px', background: `linear-gradient(90deg, ${rc}bb, ${rc}, ${rc}bb)`, boxShadow: `0 0 16px ${rc}cc, 0 0 32px ${rc}66` }} />
 
           {/* MODIFIER PANEL (25%) */}
           <div style={{ flex: '0 0 25%', padding: '12px 16px', borderBottom: `1px solid ${colors.line}`, overflow: 'hidden' }}>
@@ -462,6 +474,7 @@ function GearDetailModal({ gear, onClose }: { gear: GearRow; onClose: () => void
 
 function GearGridCard({ gear, onClick }: { gear: GearRow; onClick: () => void }) {
   const accentColor = categoryColor[gear.category] ?? colors.warn
+  const rc = gear.rarityColor
   const fallback = gear.name.charAt(0).toUpperCase()
 
   return (
@@ -477,28 +490,35 @@ function GearGridCard({ gear, onClick }: { gear: GearRow; onClick: () => void })
       onMouseEnter={(e) => {
         const inner = e.currentTarget.querySelector<HTMLElement>('div')
         if (inner) {
-          e.currentTarget.style.transform = 'translateY(-4px)'
-          inner.style.boxShadow = `0 0 20px ${accentColor}70, inset 0 0 20px ${accentColor}18`
+          e.currentTarget.style.transform = 'translateY(-5px)'
+          inner.style.boxShadow = `0 0 32px ${rc}66, 0 0 8px ${rc}44, inset 0 0 40px ${rc}18`
+          inner.style.borderColor = `${rc}99`
         }
       }}
       onMouseLeave={(e) => {
         const inner = e.currentTarget.querySelector<HTMLElement>('div')
         if (inner) {
           e.currentTarget.style.transform = 'translateY(0)'
-          inner.style.boxShadow = 'none'
+          inner.style.boxShadow = `0 0 8px ${rc}22`
+          inner.style.borderColor = `${rc}66`
         }
       }}
     >
       <div style={{
         position: 'relative', width: '100%',
         background: `linear-gradient(180deg, ${colors.bg3} 0%, ${colors.bg4} 100%)`,
-        border: `1px solid ${colors.line}`,
+        border: `1px solid ${rc}66`,
         overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
-        transition: 'box-shadow 0.15s ease',
+        transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+        boxShadow: `0 0 8px ${rc}22`,
       }}>
-        {/* accent bar */}
-        <div style={{ height: '3px', background: accentColor, flexShrink: 0 }} />
+        {/* rarity accent bar — solid, symmetric, glowing */}
+        <div style={{
+          height: '3px', flexShrink: 0,
+          background: `linear-gradient(90deg, ${rc}99, ${rc}, ${rc}99)`,
+          boxShadow: `0 0 10px ${rc}bb, 0 0 20px ${rc}55`,
+        }} />
 
         {/* landscape art panel */}
         <div style={{ position: 'relative', aspectRatio: '16/9', background: 'linear-gradient(135deg, #1a1d22, #0a0c10)', overflow: 'hidden', flexShrink: 0 }}>
@@ -512,8 +532,23 @@ function GearGridCard({ gear, onClick }: { gear: GearRow; onClick: () => void })
               </div>
             )
           }
-          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg, transparent 30%, rgba(11,13,16,0.85)), radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4))' }} />
-          <CornerBrackets color={accentColor} size={12} gap={6} />
+          {/* rarity color bottom bleed — the rarity identity bleeds up from below */}
+          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `linear-gradient(180deg, transparent 35%, ${rc}55 100%)` }} />
+          <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.35))' }} />
+          <CornerBrackets color={`${rc}cc`} size={12} gap={6} />
+
+          {/* rarity badge top-right — vivid filled badge */}
+          <div style={{
+            position: 'absolute', top: '8px', right: '8px',
+            fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide,
+            textTransform: 'uppercase', color: '#0a0c10',
+            background: rc, border: `1px solid ${rc}`,
+            padding: '3px 8px',
+            fontWeight: 700,
+            boxShadow: `0 0 10px ${rc}88`,
+          }}>
+            {gear.rarity}
+          </div>
 
           {/* level badge bottom-right */}
           <div style={{
@@ -545,20 +580,198 @@ function GearGridCard({ gear, onClick }: { gear: GearRow; onClick: () => void })
   )
 }
 
+function IconGrid() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+      <rect x="0" y="0" width="6" height="6" />
+      <rect x="8" y="0" width="6" height="6" />
+      <rect x="0" y="8" width="6" height="6" />
+      <rect x="8" y="8" width="6" height="6" />
+    </svg>
+  )
+}
+
+function IconList() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+      <rect x="0" y="1" width="14" height="3" />
+      <rect x="0" y="6" width="14" height="3" />
+      <rect x="0" y="11" width="14" height="3" />
+    </svg>
+  )
+}
+
+function GearListRow({ gear, onClick }: { gear: GearRow; onClick: () => void }) {
+  const accentColor = categoryColor[gear.category] ?? colors.warn
+  const rc = gear.rarityColor
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'stretch',
+        background: 'transparent', border: 'none', padding: 0,
+        cursor: 'pointer', textAlign: 'left', width: '100%',
+        transition: 'transform 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        const inner = e.currentTarget.querySelector<HTMLElement>('.list-inner')
+        if (inner) {
+          inner.style.boxShadow = `0 0 24px ${rc}44, inset 0 0 30px ${rc}0d`
+          inner.style.borderColor = `${rc}88`
+          inner.style.background = `linear-gradient(90deg, ${rc}0d 0%, ${colors.bg3} 60%)`
+        }
+      }}
+      onMouseLeave={(e) => {
+        const inner = e.currentTarget.querySelector<HTMLElement>('.list-inner')
+        if (inner) {
+          inner.style.boxShadow = `0 0 6px ${rc}18`
+          inner.style.borderColor = `${rc}44`
+          inner.style.background = `linear-gradient(90deg, ${rc}08 0%, ${colors.bg3} 50%)`
+        }
+      }}
+    >
+      <div
+        className="list-inner"
+        style={{
+          display: 'flex', alignItems: 'center', width: '100%',
+          background: `linear-gradient(90deg, ${rc}08 0%, ${colors.bg3} 50%)`,
+          border: `1px solid ${rc}44`,
+          boxShadow: `0 0 6px ${rc}18`,
+          overflow: 'hidden',
+          transition: 'box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease',
+          position: 'relative',
+        }}
+      >
+        {/* left rarity stripe */}
+        <div style={{
+          width: '4px', alignSelf: 'stretch', flexShrink: 0,
+          background: `linear-gradient(180deg, ${rc}cc, ${rc}, ${rc}cc)`,
+          boxShadow: `0 0 10px ${rc}bb, 0 0 20px ${rc}44`,
+        }} />
+
+        {/* name + type block */}
+        <div style={{ padding: '10px 14px', flex: '0 0 200px', borderRight: `1px solid ${colors.line}` }}>
+          <div style={{ fontFamily: fonts.display, fontSize: '22px', letterSpacing: letterSpacing.displayTight, color: colors.ink, lineHeight: 1, marginBottom: '3px' }}>
+            {gear.name}
+          </div>
+          <div style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: accentColor }}>
+            {gear.category} · {gear.subcategory}
+          </div>
+        </div>
+
+        {/* rarity badge */}
+        <div style={{ padding: '0 12px', flex: '0 0 90px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: `1px solid ${colors.line}` }}>
+          <div style={{
+            fontFamily: fonts.mono, fontSize: '8px', letterSpacing: letterSpacing.labelWide,
+            textTransform: 'uppercase', color: '#0a0c10',
+            background: rc, padding: '3px 8px',
+            fontWeight: 700, boxShadow: `0 0 8px ${rc}88`,
+            whiteSpace: 'nowrap',
+          }}>
+            {gear.rarity}
+          </div>
+        </div>
+
+        {/* stats row */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+          {[
+            { label: 'ATK', value: gear.statAttack, color: accentColor },
+            { label: gear.resourceName, value: gear.resourcePoolSize, color: colors.ink },
+            { label: 'CRIT', value: `${gear.critChance}%`, color: colors.blood },
+            { label: 'ACC', value: gear.accuracy, color: colors.warn },
+            { label: 'PEN', value: gear.penetration, color: colors.warn },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 4px', borderRight: `1px solid ${colors.line}` }}>
+              <span style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim, marginBottom: '2px' }}>
+                {label}
+              </span>
+              <span style={{ fontFamily: fonts.display, fontSize: '20px', letterSpacing: letterSpacing.displayTight, color, lineHeight: 1 }}>
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* modifier chip */}
+        <div style={{ padding: '0 12px', flex: '0 0 100px', borderRight: `1px solid ${colors.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {gear.modifier ? (
+            <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelTight, color: accentColor, textTransform: 'uppercase' }}>
+              {gear.modifier}
+            </span>
+          ) : (
+            <span style={{ fontFamily: fonts.mono, fontSize: '9px', letterSpacing: letterSpacing.labelTight, color: colors.dim, opacity: 0.4 }}>
+              —
+            </span>
+          )}
+        </div>
+
+        {/* level */}
+        <div style={{ padding: '0 14px', flex: '0 0 60px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: '7px', letterSpacing: letterSpacing.labelWide, textTransform: 'uppercase', color: colors.dim }}>LVL</span>
+          <span style={{ fontFamily: fonts.display, fontSize: '22px', letterSpacing: letterSpacing.displayTight, color: colors.muted, lineHeight: 1 }}>{gear.level}</span>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 export function GearsGrid({ gears }: { gears: GearRow[] }) {
   const [selected, setSelected] = useState<GearRow | null>(null)
+  const [view, setView] = useState<'grid' | 'list'>('grid')
 
   return (
     <>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-      }}>
-        {gears.map((g) => (
-          <GearGridCard key={g.instanceId} gear={g} onClick={() => setSelected(g)} />
+      {/* view toggle */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px', gap: '2px' }}>
+        {(['grid', 'list'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '32px', height: '32px',
+              background: view === v ? colors.bgDeep : 'transparent',
+              border: `1px solid ${view === v ? colors.lineStrong : colors.line}`,
+              color: view === v ? colors.ink : colors.dim,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (view !== v) e.currentTarget.style.color = colors.muted
+            }}
+            onMouseLeave={(e) => {
+              if (view !== v) e.currentTarget.style.color = colors.dim
+            }}
+          >
+            {v === 'grid' ? <IconGrid /> : <IconList />}
+          </button>
         ))}
       </div>
+
+      {view === 'grid' ? (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '20px',
+        }}>
+          {gears.map((g) => (
+            <GearGridCard key={g.instanceId} gear={g} onClick={() => setSelected(g)} />
+          ))}
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '6px',
+        }}>
+          {gears.map((g) => (
+            <GearListRow key={g.instanceId} gear={g} onClick={() => setSelected(g)} />
+          ))}
+        </div>
+      )}
 
       {selected && (
         <GearDetailModal gear={selected} onClose={() => setSelected(null)} />

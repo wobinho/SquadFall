@@ -4,15 +4,13 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
 const navItems = [
-  { label: 'Home',       href: '/',           symbol: '◆' },
   { label: 'Campaign',   href: '/campaign',   symbol: '▲' },
   { label: 'Missions',   href: '/missions',   symbol: '◊' },
   { label: 'Loadout',    href: '/loadout',    symbol: '✦' },
   { label: 'Characters', href: '/characters', symbol: '◆' },
   { label: 'Gears',      href: '/gears',      symbol: '▲' },
   { label: 'Skills',     href: '/skills',     symbol: '◊' },
-  { label: 'Draft',      href: '/draft',      symbol: '○' },
-  { label: 'Store',      href: '/store',      symbol: '◊' },
+  { label: 'Market',     href: '/store',      symbol: '◊' },
 ]
 
 const adminNavItem = { label: 'Admin',  href: '/admin',      symbol: '⚙' }
@@ -85,7 +83,7 @@ export default function GameSidebar({ username, isAdmin }: { username: string; i
                   display: 'flex', alignItems: 'center', gap: '12.5px',
                   padding: '11.25px 25px',
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '14px', letterSpacing: '0.15em',
+                  fontSize: '16px', letterSpacing: '0.15em',
                   textTransform: 'uppercase', textDecoration: 'none',
                   color: isActive ? '#f2f0ea' : '#8a8e96',
                   background: isActive ? '#1a1d22' : 'transparent',

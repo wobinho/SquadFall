@@ -80,7 +80,7 @@ export default async function SkillsPage() {
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: '11px',
           letterSpacing: '0.25em',
-          color: '#c53030',
+          color: '#5a5e66',
           textTransform: 'uppercase',
           marginBottom: '6px',
         }}>
@@ -132,7 +132,7 @@ export default async function SkillsPage() {
             textTransform: 'uppercase',
             marginTop: '12px',
           }}>
-            Visit the store to acquire skills
+            Visit the market to acquire skills
           </div>
         </div>
       ) : (

@@ -1,3 +1,13 @@
+export const rarityColors = {
+  Common:    '#8a8e96',
+  Uncommon:  '#4a9e6b',
+  Rare:      '#4a7fd4',
+  Epic:      '#9b59d4',
+  Legendary: '#e8a736',
+} as const
+
+export type Rarity = keyof typeof rarityColors
+
 export const colors = {
   bg:         '#0b0d10',
   bg2:        '#14171c',

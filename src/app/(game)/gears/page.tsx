@@ -17,6 +17,8 @@ export default async function GearsPage() {
         g.art,
         g.category,
         g.subcategory,
+        r.rarity_name          AS rarity,
+        r.rarity_color         AS rarity_color,
         g.stat_attack,
         g.crit_damage,
         g.crit_chance,
@@ -31,6 +33,7 @@ export default async function GearsPage() {
         gi.level
       FROM gear_instances gi
       JOIN gears g ON g.id = gi.gear_id
+      JOIN rarity r ON r.id = g.rarity
       WHERE gi.user_id = ?
       ORDER BY gi.acquired_at ASC
     `,
@@ -56,6 +59,8 @@ export default async function GearsPage() {
       art:               r.art                as string | null,
       category:          r.category           as string,
       subcategory:       r.subcategory        as string,
+      rarity:            r.rarity             as string,
+      rarityColor:       `#${r.rarity_color as string}`,
       statAttack:        r.stat_attack        as number,
       critDamage:        r.crit_damage        as number,
       critChance:        r.crit_chance        as number,

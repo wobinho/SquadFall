@@ -11,6 +11,8 @@ type Counts  = Record<string, number>
 type Row     = Record<string, unknown>
 
 type Mode = 'browse' | 'edit' | 'add'
+type AdminSection = 'db' | 'battle-simulator'
+type BattleSimTab = 'combat-module' | 'simulator-config' | 'enemy-view'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -266,6 +268,8 @@ function RowModal({ mode, table, columns, row, onClose, onSave }: RowModalProps)
 export default function AdminPage() {
   const router = useRouter()
 
+  const [section, setSection]       = useState<AdminSection>('db')
+  const [battleTab, setBattleTab]   = useState<BattleSimTab>('combat-module')
   const [schema, setSchema]         = useState<Schema>({})
   const [counts, setCounts]         = useState<Counts>({})
   const [activeTable, setActiveTable] = useState<string>('users')
@@ -433,6 +437,61 @@ export default function AdminPage() {
             background: '#0a0c10', border: '1px solid #1e1a14',
             padding: '12px 0',
           }}>
+            {/* section switcher */}
+            <div style={{ padding: '0 8px 12px', borderBottom: '1px solid #1a1410', marginBottom: '8px' }}>
+              {([
+                { id: 'db', label: '▣ DB CONTROL' },
+                { id: 'battle-simulator', label: '⚔ BATTLE SIM' },
+              ] as { id: AdminSection; label: string }[]).map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setSection(s.id)}
+                  style={{
+                    width: '100%', textAlign: 'left', padding: '6px 6px',
+                    background: section === s.id ? '#1a1400' : 'none',
+                    border: 'none',
+                    borderLeft: `2px solid ${section === s.id ? '#e8a736' : 'transparent'}`,
+                    color: section === s.id ? '#e8a736' : '#6a5a4a',
+                    cursor: 'pointer', fontSize: '10px', letterSpacing: '0.15em',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    marginBottom: '2px', transition: 'all 0.1s',
+                  }}
+                >{s.label}</button>
+              ))}
+            </div>
+
+            {section === 'battle-simulator' && (
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{
+                  fontSize: '7px', letterSpacing: '0.3em', color: '#3a3030',
+                  textTransform: 'uppercase', padding: '4px 14px 6px',
+                  borderTop: '1px solid #1a1410',
+                }}>BATTLE SIM</div>
+                {([
+                  { id: 'combat-module',    label: '◉ Combat Module' },
+                  { id: 'simulator-config', label: '◑ Simulator Config' },
+                  { id: 'enemy-view',       label: '◈ Enemy View' },
+                ] as { id: BattleSimTab; label: string }[]).map(t => (
+                  <button
+                    key={t.id}
+                    className="table-btn"
+                    onClick={() => setBattleTab(t.id)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '7px 14px',
+                      background: battleTab === t.id ? '#1a1400' : 'none',
+                      border: 'none',
+                      borderLeft: `2px solid ${battleTab === t.id ? '#e8a736' : 'transparent'}`,
+                      color: battleTab === t.id ? '#e8a736' : '#8a7060',
+                      cursor: 'pointer', fontSize: '11px',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      transition: 'all 0.1s',
+                    }}
+                  >{t.label}</button>
+                ))}
+              </div>
+            )}
+
+            {section === 'db' && <>
             <div style={{
               fontSize: '8px', letterSpacing: '0.3em', color: '#4a4040',
               textTransform: 'uppercase', padding: '0 14px 8px',
@@ -475,10 +534,48 @@ export default function AdminPage() {
                 })}
               </div>
             ))}
+            </>}
           </div>
 
           {/* ── main panel ── */}
           <div style={{ flex: 1, minWidth: 0 }}>
+
+          {section === 'battle-simulator' && (() => {
+            const BATTLE_TABS: Record<BattleSimTab, { title: string; subtitle: string; icon: string }> = {
+              'combat-module':    { title: 'COMBAT MODULE',    subtitle: 'SQUADFALL OS v2.1 // COMBAT ENGINE',    icon: '◉' },
+              'simulator-config': { title: 'SIMULATOR CONFIG', subtitle: 'SQUADFALL OS v2.1 // SIM CONFIGURATION', icon: '◑' },
+              'enemy-view':       { title: 'ENEMY VIEW',       subtitle: 'SQUADFALL OS v2.1 // THREAT ANALYSIS',   icon: '◈' },
+            }
+            const tab = BATTLE_TABS[battleTab]
+            return (
+              <div style={{
+                border: '1px solid #1e1a14',
+                background: '#08090b',
+                padding: '48px 40px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: '20px', textAlign: 'center',
+                animation: 'fadeIn 0.3s ease',
+              }}>
+                <div style={{
+                  fontFamily: "'Bebas Neue', sans-serif", fontSize: '56px',
+                  letterSpacing: '0.08em', color: '#e8a736', lineHeight: 1,
+                }}>{tab.title}</div>
+                <div style={{
+                  fontSize: '9px', letterSpacing: '0.35em', color: '#4a4040',
+                  textTransform: 'uppercase',
+                }}>{tab.subtitle}</div>
+                <div style={{
+                  border: '1px dashed #2a2020', padding: '32px 60px',
+                  color: '#3a3030', fontSize: '11px', letterSpacing: '0.2em',
+                  marginTop: '16px',
+                }}>
+                  {tab.icon} PLACEHOLDER — COMING SOON
+                </div>
+              </div>
+            )
+          })()}
+
+          {section === 'db' && <>
 
             {/* toolbar */}
             <div style={{
@@ -660,6 +757,7 @@ export default function AdminPage() {
               <span>SHOWING {filteredRows.length} / {rows.length} ROWS</span>
               <span>TABLE: {activeTable} // DIRECT ACCESS</span>
             </div>
+          </>}
           </div>
         </div>
       </div>
