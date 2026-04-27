@@ -298,7 +298,7 @@ function Selector<T extends { id: number; name: string }>({
 // Each gear panel is independent — its own resource display and skill list.
 
 function GearSlotPanel({
-  slotLabel, gearSlot, gears, skills, onGearChange, onSkillChange, accent,
+  slotLabel, gearSlot, gears, skills, onGearChange, onSkillChange, accent, gearIndex,
 }: {
   slotLabel: string
   gearSlot: GearSlot
@@ -307,18 +307,17 @@ function GearSlotPanel({
   onGearChange: (gear: SimGear | null) => void
   onSkillChange: (skillIdx: number, skill: SimSkill | null) => void
   accent: string
+  gearIndex: 0 | 1
 }) {
   const g = gearSlot.gear
+  const gearBorderColor = gearIndex === 0 ? 'border-l-green-500' : 'border-l-purple-500'
+  const gearLabelColor = gearIndex === 0 ? 'text-green-500' : 'text-purple-400'
   return (
-    <div style={{
-      flex: 1, border: `1px solid ${accent}33`, background: C.bg2,
-      display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px',
-    }}>
-      {/* header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-        <div style={{ width: '3px', height: '3px', background: accent, transform: 'rotate(45deg)', flexShrink: 0 }} />
-        <span style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.2em', color: accent, textTransform: 'uppercase' }}>{slotLabel}</span>
-      </div>
+    <div className={`flex-1 border border-zinc-700 rounded-sm p-3 bg-zinc-900/50 flex flex-col gap-2 border-l-4 ${gearBorderColor} relative`}>
+      {/* Gear label indicator */}
+      <span className={`absolute top-2 right-2 text-xs font-bold tracking-widest uppercase opacity-60 ${gearLabelColor}`}>
+        {gearIndex === 0 ? 'Gear 1' : 'Gear 2'}
+      </span>
 
       {/* gear picker */}
       <Selector
@@ -330,37 +329,48 @@ function GearSlotPanel({
         getArt={item => item.art ? `/assets/gears/${item.art}.png` : null}
       />
 
-      {/* gear stats — only shown when a gear is selected */}
+      {/* gear stats + resource pool — only shown when a gear is selected */}
       {g && (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          <div style={{ background: C.bg, border: `1px solid ${accent}22`, padding: '3px 7px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>ATK </span>
-            <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: accent }}>{g.statAttack}</span>
+        <>
+          <div className="flex gap-2 flex-wrap">
+            <div className="bg-zinc-900 border border-yellow-600/20 px-2 py-1">
+              <span className="text-xs font-mono tracking-widest uppercase text-zinc-500">ATK</span>
+              <span className="font-['Bebas_Neue'] text-base text-yellow-600 block">{g.statAttack}</span>
+            </div>
+            {g.resourcePoolSize > 0 && (
+              <div className="bg-zinc-900 border border-yellow-600/20 px-2 py-1">
+                <span className="text-xs font-mono tracking-widest uppercase text-zinc-500">{g.resourceName}</span>
+                <span className="font-['Bebas_Neue'] text-base text-yellow-500 block">{g.resourcePoolSize}</span>
+              </div>
+            )}
+            {g.critChance > 0 && (
+              <div className="bg-zinc-900 border border-red-600/20 px-2 py-1">
+                <span className="text-xs font-mono tracking-widest uppercase text-zinc-500">CRIT</span>
+                <span className="font-['Bebas_Neue'] text-base text-red-500 block">{g.critChance}%</span>
+              </div>
+            )}
           </div>
+
+          {/* resource pool indicator */}
           {g.resourcePoolSize > 0 && (
-            <div style={{ background: C.bg, border: `1px solid ${C.gold}33`, padding: '3px 7px' }}>
-              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>{g.resourceName} </span>
-              <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: C.gold }}>{g.resourcePoolSize}</span>
+            <div className="flex items-center gap-2 text-xs font-mono tracking-widest uppercase py-1 px-2 border border-yellow-600/30 bg-yellow-900/20 rounded">
+              <span>{g.resourceName}:</span>
+              <div className="flex-1 h-1.5 bg-zinc-800 border border-zinc-700 relative rounded-sm overflow-hidden">
+                <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-600 to-yellow-600/60 w-full transition-all duration-500" />
+              </div>
+              <span>{g.resourcePoolSize}</span>
             </div>
           )}
-          {g.critChance > 0 && (
-            <div style={{ background: C.bg, border: `1px solid ${C.blood}22`, padding: '3px 7px' }}>
-              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>CRIT </span>
-              <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: C.blood }}>{g.critChance}%</span>
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       {/* skill slots — always 3, disabled when no gear */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-          Skills
-        </span>
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-mono tracking-widest uppercase text-zinc-500">Skills</span>
         {[0, 1, 2].map(si => (
-          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, width: '12px' }}>{si + 1}.</span>
-            <div style={{ flex: 1 }}>
+          <div key={si} className="flex items-center gap-2">
+            <span className="text-xs font-mono tracking-widest uppercase text-zinc-500 w-4">{si + 1}.</span>
+            <div className="flex-1">
               <Selector
                 options={skills}
                 selected={gearSlot.skills[si]}
@@ -371,7 +381,7 @@ function GearSlotPanel({
               />
             </div>
             {gearSlot.skills[si] && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.gold, flexShrink: 0 }}>
+              <span className="text-xs font-mono tracking-widest uppercase text-yellow-500 flex-shrink-0">
                 {gearSlot.skills[si]!.basePower}p
               </span>
             )}
@@ -385,7 +395,7 @@ function GearSlotPanel({
 // ── Character Slot Panel (config) ──────────────────────────────────────────────
 
 function CharSlotPanel({
-  slotIdx, charSlot, simData, onCharChange, onGearChange, onSkillChange,
+  slotIdx, charSlot, simData, onCharChange, onGearChange, onSkillChange, onRandomize,
 }: {
   slotIdx: number
   charSlot: CharSlot
@@ -393,23 +403,35 @@ function CharSlotPanel({
   onCharChange: (c: SimCharacter | null) => void
   onGearChange: (gearIdx: 0 | 1, gear: SimGear | null) => void
   onSkillChange: (gearIdx: 0 | 1, skillIdx: number, skill: SimSkill | null) => void
+  onRandomize?: () => void
 }) {
   const fc  = charSlot.character?.factionColor ?? C.lineStr
   const ch  = charSlot.character
 
   return (
-    <div style={{ border: `1px solid ${fc}44`, background: C.bg, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ height: '2px', background: `linear-gradient(90deg, ${fc}, ${fc}44, transparent)` }} />
+    <div className="char-card relative overflow-hidden border border-zinc-700 bg-zinc-900 hover:border-yellow-600/50 transition-all duration-200">
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-yellow-600 via-yellow-600/20 to-transparent" />
 
-      <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="p-3.5 flex flex-col gap-3">
 
-        {/* slot label + faction */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontFamily: DISPLAY, fontSize: '20px', color: C.dim, letterSpacing: '0.06em' }}>SLOT {slotIdx + 1}</span>
-          {ch && (
-            <span style={{ fontFamily: MONO, fontSize: '8px', color: fc, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              {ch.factionName}
-            </span>
+        {/* slot label + faction + randomize button */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-['Bebas_Neue'] text-lg text-zinc-500 tracking-wide">SLOT {slotIdx + 1}</span>
+            {ch && (
+              <span className="text-xs font-mono tracking-widest uppercase text-yellow-600">
+                {ch.factionName}
+              </span>
+            )}
+          </div>
+          {onRandomize && (
+            <button
+              onClick={onRandomize}
+              className="px-2 py-1 text-xs font-mono font-semibold tracking-widest uppercase border border-yellow-600/40 bg-yellow-900/10 text-yellow-600 rounded hover:bg-yellow-900/20 hover:border-yellow-500 transition-all duration-150 active:scale-90"
+              title="Randomize this character slot"
+            >
+              🎲 RND
+            </button>
           )}
         </div>
 
@@ -426,26 +448,21 @@ function CharSlotPanel({
         {ch && (
           <>
             {/* art + name + stats row */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{
-                width: '72px', height: '72px', flexShrink: 0,
-                background: `linear-gradient(135deg, ${fc}22, ${C.bg2})`,
-                border: `1px solid ${fc}44`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
+            <div className="flex gap-3 items-start">
+              <div className="w-16 h-16 flex-shrink-0 bg-gradient-to-br from-yellow-600/10 to-zinc-800 border border-yellow-600/20 flex items-center justify-center rounded-sm overflow-hidden">
                 {ch.art
-                  ? <img src={`/assets/characters/${ch.art}.png`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontFamily: DISPLAY, fontSize: '28px', color: `${fc}88` }}>{ch.name.charAt(0)}</span>
+                  ? <img src={`/assets/characters/${ch.art}.png`} alt="" className="w-full h-full object-cover" />
+                  : <span className="font-['Bebas_Neue'] text-2xl text-yellow-600/50">{ch.name.charAt(0)}</span>
                 }
               </div>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ fontFamily: DISPLAY, fontSize: '22px', color: C.ink, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div className="flex-1 min-w-0 flex flex-col gap-2">
+                <div className="font-['Bebas_Neue'] text-xl text-white tracking-wide overflow-hidden text-ellipsis whitespace-nowrap">
                   {ch.name}
                 </div>
-                <div style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.1em' }}>{ch.className}</div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                <div className="text-xs font-mono tracking-widest uppercase text-zinc-500">{ch.className}</div>
+                <div className="flex gap-1 flex-wrap">
                   <StatPill label="HP"  value={ch.statHp}      color={C.blood} />
-                  <StatPill label="SPD" value={ch.statSpeed}   color={fc} />
+                  <StatPill label="SPD" value={ch.statSpeed}   color="#e8a736" />
                   <StatPill label="DEF" value={ch.statDefense} color={C.muted} />
                 </div>
               </div>
@@ -466,6 +483,7 @@ function CharSlotPanel({
                   onGearChange={gear => onGearChange(gi, gear)}
                   onSkillChange={(si, skill) => onSkillChange(gi, si, skill)}
                   accent={fc}
+                  gearIndex={gi}
                 />
               ))}
             </div>
@@ -479,7 +497,7 @@ function CharSlotPanel({
 // ── Enemy Slot Card (config) ───────────────────────────────────────────────────
 
 function EnemySlotCard({
-  slotIdx, enemySlot, enemies, enemySkills, onEnemyChange, onSkillChange,
+  slotIdx, enemySlot, enemies, enemySkills, onEnemyChange, onSkillChange, onRandomize,
 }: {
   slotIdx: number
   enemySlot: EnemySlot
@@ -487,13 +505,46 @@ function EnemySlotCard({
   enemySkills: SimEnemySkill[]
   onEnemyChange: (e: SimEnemy | null) => void
   onSkillChange: (si: number, skill: SimEnemySkill | null) => void
+  onRandomize?: () => void
 }) {
   const en = enemySlot.enemy
   return (
     <div style={{ border: `1px solid ${C.blood}33`, background: C.bg, padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '3px', height: '3px', background: C.blood, transform: 'rotate(45deg)' }} />
-        <span style={{ fontFamily: MONO, fontSize: '8px', color: C.blood, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Enemy {slotIdx + 1}</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ width: '3px', height: '3px', background: C.blood, transform: 'rotate(45deg)' }} />
+          <span style={{ fontFamily: MONO, fontSize: '8px', color: C.blood, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Enemy {slotIdx + 1}</span>
+        </div>
+        {onRandomize && (
+          <button
+            onClick={onRandomize}
+            style={{
+              padding: '3px 6px',
+              fontSize: '9px',
+              fontFamily: MONO,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              border: `1px solid ${C.blood}40`,
+              background: `${C.blood}0a`,
+              color: C.blood,
+              borderRadius: '2px',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `${C.blood}15`
+              e.currentTarget.style.borderColor = `${C.blood}80`
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = `${C.blood}0a`
+              e.currentTarget.style.borderColor = `${C.blood}40`
+            }}
+            title="Randomize this enemy slot"
+          >
+            🎲 RND
+          </button>
+        )}
       </div>
 
       <Selector
@@ -649,6 +700,58 @@ function SmootHpBar({ current, max, color }: { current: number; max: number; col
   )
 }
 
+// ── Poke HP Box (compact HP display) ───────────────────────────────────────────
+
+function PokeHpBox({
+  unit, isTargetable, isTargeted, isActive, onTargetClick,
+}: {
+  unit: CombatUnit
+  isTargetable: boolean
+  isTargeted: boolean
+  isActive: boolean
+  onTargetClick?: () => void
+}) {
+  const isDead = unit.hp <= 0
+  return (
+    <div
+      onClick={() => isTargetable && !isDead && onTargetClick?.()}
+      className={`flex flex-col gap-1 p-2 rounded-sm border transition-all duration-200 ${isTargeted ? 'border-yellow-500 bg-yellow-500/10' : isActive ? 'border-red-500 bg-red-500/10' : 'border-zinc-700 bg-zinc-900'} ${isDead ? 'opacity-30' : ''} ${isTargetable && !isDead ? 'cursor-pointer' : ''}`}
+    >
+      <div className="text-xs font-mono text-zinc-300 truncate">{unit.name}</div>
+      <SmootHpBar current={unit.hp} max={unit.maxHp} color={unit.hp > unit.maxHp * 0.5 ? C.green : unit.hp > unit.maxHp * 0.2 ? C.gold : C.blood} />
+    </div>
+  )
+}
+
+// ── Arena Battler (sprite display) ────────────────────────────────────────────
+
+function ArenaBattler({
+  unit, side, isActive, isTargetable, isTargeted, onTargetClick,
+}: {
+  unit: CombatUnit
+  side: 'front' | 'back'
+  isActive: boolean
+  isTargetable: boolean
+  isTargeted: boolean
+  onTargetClick?: () => void
+}) {
+  const isDead = unit.hp <= 0
+  return (
+    <div
+      onClick={() => isTargetable && !isDead && onTargetClick?.()}
+      className={`flex flex-col items-center transition-all duration-200 ${isDead ? 'opacity-25' : ''} ${isTargetable && !isDead ? 'cursor-pointer' : ''}`}
+    >
+      <div className={`w-20 h-20 flex items-center justify-center overflow-hidden rounded-sm border border-zinc-700 bg-zinc-900 ${isTargeted ? 'drop-shadow-lg drop-shadow-yellow-500/50 scale-110' : isActive ? 'drop-shadow-lg drop-shadow-yellow-500/40' : ''} transition-all duration-200`}>
+        {unit.art
+          ? <img src={`/assets/enemies/${unit.art}.png`} alt={unit.name} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+          : <span className="font-['Bebas_Neue'] text-2xl text-yellow-600/50">{unit.name.charAt(0)}</span>
+        }
+      </div>
+      <span className="text-xs font-mono text-zinc-500 mt-1">{unit.name.slice(0, 10)}</span>
+    </div>
+  )
+}
+
 // ── Enemy card — grid tile on top half ────────────────────────────────────────
 
 function EnemyBattleCard({
@@ -661,83 +764,56 @@ function EnemyBattleCard({
   onTargetClick?: () => void
 }) {
   const isDead = unit.hp <= 0
-  const fc = unit.factionColor
   const hpPct = Math.max(0, unit.hp / unit.maxHp)
   const hpColor = hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood
+
+  const borderClass = isTargeted ? 'border-yellow-500 shadow-lg shadow-yellow-500/30'
+    : isActive ? 'border-red-500 shadow-lg shadow-red-500/30'
+    : 'border-red-900/50 hover:border-red-500/70'
+
+  const bgClass = isTargeted ? 'bg-yellow-500/10'
+    : isActive ? 'bg-red-950/30'
+    : 'bg-red-950/10 hover:bg-red-950/20'
 
   return (
     <div
       onClick={() => isTargetable && !isDead && onTargetClick?.()}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-        padding: '14px 12px 12px',
-        background: isTargeted ? `${C.gold}0a` : isActive ? `${fc}0a` : C.bg2,
-        border: `2px solid ${isTargeted ? C.gold : isActive ? fc : C.lineStr}`,
-        cursor: isTargetable && !isDead ? 'pointer' : 'default',
-        opacity: isDead ? 0.28 : 1,
-        transition: 'all 0.2s ease',
-        boxShadow: isTargeted ? `0 0 20px ${C.gold}33` : isActive ? `0 0 16px ${fc}33` : 'none',
-        position: 'relative',
-      }}
+      className={`relative overflow-hidden flex flex-col items-center gap-3 p-3 rounded-md transition-all duration-200 ${borderClass} ${bgClass} ${isDead ? 'opacity-35' : ''} border-2 ${isTargetable && !isDead ? 'cursor-pointer' : ''}`}
     >
-      {/* top accent */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
-        background: `linear-gradient(90deg, ${isTargeted ? C.gold : isActive ? fc : C.line}, transparent)`,
-      }} />
+      {/* top accent gradient */}
+      <div className={`absolute top-0 left-0 right-0 h-0.5 ${isTargeted ? 'bg-yellow-500' : isActive ? 'bg-red-500' : 'bg-red-900'}`} />
 
       {/* art — large, centered */}
-      <div style={{
-        width: '96px', height: '96px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-        filter: isDead
-          ? 'grayscale(1) opacity(0.3)'
-          : isTargeted
-            ? `drop-shadow(0 0 10px ${C.gold})`
-            : isActive
-              ? `drop-shadow(0 0 8px ${fc})`
-              : 'none',
-        transition: 'filter 0.2s',
-        transform: isTargeted ? 'scale(1.07)' : 'scale(1)',
-      }}>
+      <div className={`w-24 h-24 flex items-center justify-center overflow-hidden rounded-sm border border-zinc-700 bg-zinc-900 ${isDead ? 'grayscale opacity-30' : isTargeted ? 'drop-shadow-lg drop-shadow-yellow-500/50 scale-110' : isActive ? 'drop-shadow-lg drop-shadow-red-500/40' : ''} transition-all duration-200`}>
         {unit.art
-          ? <img src={`/assets/enemies/${unit.art}.png`} alt={unit.name}
-                 style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
-          : <span style={{ fontFamily: DISPLAY, fontSize: '40px', color: `${fc}77` }}>{unit.name.charAt(0)}</span>
+          ? <img src={`/assets/enemies/${unit.art}.png`} alt={unit.name} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+          : <span className="font-['Bebas_Neue'] text-4xl text-red-600/50">{unit.name.charAt(0)}</span>
         }
       </div>
 
-      {/* name */}
-      <div style={{ width: '100%', textAlign: 'center' }}>
-        <div style={{
-          fontFamily: DISPLAY, fontSize: '16px', letterSpacing: '0.05em',
-          color: isDead ? C.dim : isActive ? fc : C.ink,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
+      {/* name + stats */}
+      <div className="w-full text-center">
+        <div className={`font-['Bebas_Neue'] text-sm tracking-wide overflow-hidden text-ellipsis whitespace-nowrap ${isDead ? 'text-zinc-500' : isActive ? 'text-red-400' : 'text-white'}`}>
           {isDead ? '✕ ' : ''}{unit.name}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.12em', marginTop: '1px' }}>
+        <div className="text-xs font-mono tracking-widest text-zinc-500 mt-0.5">
           SPD {unit.speed} · ATK {unit.atk} · DEF {unit.def}
         </div>
       </div>
 
       {/* HP bar */}
-      <div style={{ width: '100%' }}>
+      <div className="w-full">
         <SmootHpBar current={unit.hp} max={unit.maxHp} color={hpColor} />
       </div>
 
       {/* target cue */}
       {isTargetable && !isDead && (
-        <div style={{
-          fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.14em',
-          padding: '3px 8px', border: `1px dashed ${C.gold}55`, background: `${C.gold}08`,
-        }}>
+        <div className="text-xs font-mono tracking-widest text-yellow-600 py-1 px-2 border border-dashed border-yellow-600/50 bg-yellow-900/20 rounded">
           ◆ CLICK TO TARGET
         </div>
       )}
       {isTargeted && !isTargetable && (
-        <div style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.14em' }}>▶ TARGETED</div>
+        <div className="text-xs font-mono tracking-widest text-yellow-600">▶ TARGETED</div>
       )}
     </div>
   )
@@ -986,6 +1062,51 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
     })
   }
 
+  function randomizeCharSlot(si: number) {
+    if (!simData) return
+    const randomChar = simData.characters[Math.floor(Math.random() * simData.characters.length)]
+    const randomGear1 = simData.gears[Math.floor(Math.random() * simData.gears.length)]
+    const randomGear2 = simData.gears[Math.floor(Math.random() * simData.gears.length)]
+
+    updateCharSlot(si, slot => ({
+      ...slot,
+      character: randomChar,
+      gears: [
+        {
+          gear: randomGear1,
+          skills: [
+            simData.skills[Math.floor(Math.random() * simData.skills.length)] || null,
+            simData.skills[Math.floor(Math.random() * simData.skills.length)] || null,
+            simData.skills[Math.floor(Math.random() * simData.skills.length)] || null,
+          ]
+        },
+        {
+          gear: randomGear2,
+          skills: [
+            simData.skills[Math.floor(Math.random() * simData.skills.length)] || null,
+            simData.skills[Math.floor(Math.random() * simData.skills.length)] || null,
+            simData.skills[Math.floor(Math.random() * simData.skills.length)] || null,
+          ]
+        }
+      ]
+    }))
+  }
+
+  function randomizeEnemySlot(waveIdx: number, slotIdx: number) {
+    if (!simData) return
+    const randomEnemy = simData.enemies[Math.floor(Math.random() * simData.enemies.length)]
+    updateEnemySlot(waveIdx, slotIdx, slot => ({
+      ...slot,
+      enemy: randomEnemy,
+      skills: [
+        simData.enemySkills[Math.floor(Math.random() * simData.enemySkills.length)] || null,
+        simData.enemySkills[Math.floor(Math.random() * simData.enemySkills.length)] || null,
+        simData.enemySkills[Math.floor(Math.random() * simData.enemySkills.length)] || null,
+        simData.enemySkills[Math.floor(Math.random() * simData.enemySkills.length)] || null,
+      ]
+    }))
+  }
+
   if (loading) return (
     <div style={{ padding: '60px', textAlign: 'center', fontFamily: MONO, fontSize: '10px', color: C.dim, letterSpacing: '0.2em' }}>
       ▶▶ LOADING SIM DATA...
@@ -1005,7 +1126,19 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
 
       {/* Player Roster */}
       <div>
-        <SectionHead label="Player Roster — 3 Character Slots" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <SectionHead label="Player Roster — 3 Character Slots" />
+          <button
+            onClick={() => {
+              randomizeCharSlot(0)
+              randomizeCharSlot(1)
+              randomizeCharSlot(2)
+            }}
+            className="px-3 py-1.5 border border-yellow-600 bg-yellow-900/10 text-yellow-600 text-sm font-mono font-semibold tracking-widest uppercase rounded hover:bg-yellow-900/20 hover:border-yellow-500 transition-all duration-200 active:scale-95"
+          >
+            🎲 Randomize All
+          </button>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(300px, 1fr))', gap: '16px' }}>
           {([0, 1, 2] as const).map(si => (
             <CharSlotPanel
@@ -1026,6 +1159,7 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
                 gears[gi] = { ...gears[gi], skills }
                 return { ...slot, gears }
               })}
+              onRandomize={() => randomizeCharSlot(si)}
             />
           ))}
         </div>
@@ -1092,6 +1226,7 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
               onSkillChange={(ski, skill) => updateEnemySlot(activeWave, si, s => {
                 const skills = [...s.skills]; skills[ski] = skill; return { ...s, skills }
               })}
+              onRandomize={() => randomizeEnemySlot(activeWave, si)}
             />
           ))}
         </div>
@@ -1348,189 +1483,295 @@ export function CombatModule({ config, onRetry, onReset }: {
       {/* ── Turn order strip ── */}
       <TurnStrip units={turnOrder} currentIdx={actorIdx} />
 
-      {/* ── Arena ── */}
-      <div style={{
-        position: 'relative',
-        background: `linear-gradient(180deg, #0c0e14 0%, #080a0e 55%, #0e1018 55%, #0a0c10 100%)`,
-        height: '340px',
-        display: 'flex', alignItems: 'stretch',
-        overflow: 'hidden',
-        borderBottom: `1px solid ${C.line}`,
-      }}>
-        {/* ground line */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: '55%', height: '1px', background: C.line }} />
+      {/* ── Game Board: Hearthstone/Shadowverse Style ── */}
+      <div className="flex flex-col flex-1 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 border-b border-zinc-800 overflow-hidden">
 
-        {/* ── Enemy side: HP boxes top-left, sprites top-right ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '16px 12px 0 16px', gap: '8px', zIndex: 1 }}>
-          <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '2px' }}>
-            ◈ Enemy Force
+        {/* ── Opponent's Board (Top) ── */}
+        <div className="flex-1 flex flex-col p-6 border-b border-zinc-800 bg-gradient-to-b from-red-950/20 to-transparent">
+          <div className="text-xs font-mono tracking-widest uppercase text-zinc-500 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-red-600 rounded-full" />
+            Opponent's Field
           </div>
-          {enemies.map(u => (
-            <PokeHpBox
-              key={u.id}
-              unit={u}
-              isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
-              isTargeted={targetId === u.id}
-              isActive={currentActor?.id === u.id && currentActor.isEnemy}
-              onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
-            />
-          ))}
+
+          {/* Enemy Cards Grid */}
+          <div className="flex gap-4 justify-center flex-wrap items-start flex-1">
+            {enemies.length === 0 ? (
+              <div className="text-zinc-600 text-sm font-mono">No enemies</div>
+            ) : (
+              enemies.map(u => {
+                const isDead = u.hp <= 0
+                const hpPct = Math.max(0, u.hp / u.maxHp)
+                const hpColor = hpPct > 0.5 ? '#6b8a3a' : hpPct > 0.2 ? '#e8a736' : '#c53030'
+                const isTargeted = targetId === u.id
+                const isActive = currentActor?.id === u.id && currentActor.isEnemy
+
+                return (
+                  <div
+                    key={u.id}
+                    onClick={() => isPlayerTurn && phase === 'select' && u.hp > 0 && setTargetId(u.id)}
+                    className={`flex flex-col w-28 rounded-lg border-2 transition-all duration-200 cursor-pointer relative overflow-hidden shadow-lg ${
+                      isTargeted ? 'border-yellow-500 shadow-yellow-500/40 bg-yellow-500/5 scale-105' :
+                      isActive ? 'border-red-500 shadow-red-500/40 bg-red-500/5' :
+                      isDead ? 'border-zinc-700 opacity-25 bg-zinc-900' :
+                      'border-red-900/40 hover:border-red-600/60 bg-red-950/10 hover:bg-red-950/20'
+                    }`}
+                  >
+                    {/* Top Accent */}
+                    <div className={`h-1 ${isTargeted ? 'bg-yellow-500' : isActive ? 'bg-red-500' : 'bg-red-900/50'}`} />
+
+                    {/* Card Body */}
+                    <div className="p-3 flex flex-col gap-2 flex-1">
+                      {/* Art */}
+                      <div className="w-full h-20 bg-gradient-to-br from-red-900/20 to-zinc-900 border border-red-900/30 rounded-md flex items-center justify-center overflow-hidden">
+                        {u.art ? (
+                          <img src={`/assets/enemies/${u.art}.png`} alt={u.name} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+                        ) : (
+                          <span className="font-['Bebas_Neue'] text-3xl text-red-600/50">{u.name.charAt(0)}</span>
+                        )}
+                      </div>
+
+                      {/* Name */}
+                      <div className={`text-xs font-['Bebas_Neue'] tracking-wide truncate text-center ${isDead ? 'text-zinc-600' : 'text-white'}`}>
+                        {u.name}
+                      </div>
+
+                      {/* Stats Row */}
+                      <div className="text-xs font-mono text-zinc-500 text-center">
+                        <span className="text-red-500 font-bold">{u.atk}A</span>
+                        <span className="mx-1">·</span>
+                        <span className="text-zinc-400">{u.def}D</span>
+                      </div>
+
+                      {/* HP Bar */}
+                      <div className="w-full h-3 bg-zinc-800 border border-zinc-700 rounded overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: `${hpPct * 100}%`,
+                            background: hpColor,
+                            boxShadow: `0 0 8px ${hpColor}44`
+                          }}
+                        />
+                      </div>
+
+                      {/* HP Text */}
+                      <div className="text-xs font-mono text-center text-zinc-400">
+                        <span style={{ color: hpColor }} className="font-bold">{u.hp}</span>/<span className="text-zinc-500">{u.maxHp}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
 
-        {/* Enemy sprites top-right */}
-        <div style={{ position: 'absolute', right: '10%', top: '6%', display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
-          {enemies.map(u => (
-            <ArenaBattler
-              key={u.id}
-              unit={u}
-              side="front"
-              isActive={currentActor?.id === u.id && currentActor.isEnemy}
-              isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
-              isTargeted={targetId === u.id}
-              onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
-            />
-          ))}
-        </div>
+        {/* ── Center: Player's Field (Bottom) ── */}
+        <div className="flex-1 flex flex-col p-6 bg-gradient-to-b from-transparent to-green-950/10">
+          <div className="text-xs font-mono tracking-widest uppercase text-zinc-500 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+            Your Field
+          </div>
 
-        {/* Player sprites bottom-left */}
-        <div style={{ position: 'absolute', left: '6%', bottom: '10%', display: 'flex', gap: '20px', alignItems: 'flex-end' }}>
-          {players.map(u => (
-            <ArenaBattler
-              key={u.id}
-              unit={u}
-              side="back"
-              isActive={currentActor?.id === u.id && !currentActor.isEnemy}
-              isTargetable={false}
-              isTargeted={false}
-            />
-          ))}
-        </div>
+          {/* Player Cards Grid */}
+          <div className="flex gap-4 justify-center flex-wrap items-end flex-1">
+            {players.length === 0 ? (
+              <div className="text-zinc-600 text-sm font-mono">No characters</div>
+            ) : (
+              players.map(u => {
+                const isDead = u.hp <= 0
+                const hpPct = Math.max(0, u.hp / u.maxHp)
+                const hpColor = hpPct > 0.5 ? '#6b8a3a' : hpPct > 0.2 ? '#e8a736' : '#c53030'
+                const isActive = currentActor?.id === u.id && !currentActor.isEnemy
+                const fc = u.factionColor
 
-        {/* ── Player HP boxes bottom-right ── */}
-        <div style={{ position: 'absolute', right: '14px', bottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
-          {players.map(u => (
-            <PokeHpBox
-              key={u.id}
-              unit={u}
-              isTargetable={false}
-              isTargeted={false}
-              isActive={currentActor?.id === u.id && !currentActor.isEnemy}
-            />
-          ))}
+                return (
+                  <div
+                    key={u.id}
+                    className={`flex flex-col w-28 rounded-lg border-2 transition-all duration-200 relative overflow-hidden shadow-lg ${
+                      isActive ? `border-yellow-500 shadow-lg shadow-yellow-500/40 bg-yellow-500/5 scale-105` :
+                      isDead ? 'border-zinc-700 opacity-25 bg-zinc-900' :
+                      'border-emerald-900/40 hover:border-emerald-600/60 bg-emerald-950/10 hover:bg-emerald-950/20'
+                    }`}
+                  >
+                    {/* Top Accent with Faction Color */}
+                    <div className="h-1" style={{ background: isActive ? '#e8a736' : fc }} />
+
+                    {/* Card Body */}
+                    <div className="p-3 flex flex-col gap-2 flex-1">
+                      {/* Art */}
+                      <div className="w-full h-20 border border-emerald-900/30 rounded-md flex items-center justify-center overflow-hidden" style={{ background: `${fc}10` }}>
+                        {u.art ? (
+                          <img src={`/assets/characters/${u.art}.png`} alt={u.name} className="w-full h-full object-cover" style={{ imageRendering: 'pixelated' }} />
+                        ) : (
+                          <span className="font-['Bebas_Neue'] text-3xl opacity-50">{u.name.charAt(0)}</span>
+                        )}
+                      </div>
+
+                      {/* Name */}
+                      <div className={`text-xs font-['Bebas_Neue'] tracking-wide truncate text-center ${isDead ? 'text-zinc-600' : 'text-white'}`}>
+                        {u.name}
+                      </div>
+
+                      {/* Stats Row */}
+                      <div className="text-xs font-mono text-zinc-500 text-center">
+                        <span style={{ color: fc }} className="font-bold">{u.atk}A</span>
+                        <span className="mx-1">·</span>
+                        <span className="text-zinc-400">{u.def}D</span>
+                      </div>
+
+                      {/* HP Bar */}
+                      <div className="w-full h-3 bg-zinc-800 border border-zinc-700 rounded overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: `${hpPct * 100}%`,
+                            background: hpColor,
+                            boxShadow: `0 0 8px ${hpColor}44`
+                          }}
+                        />
+                      </div>
+
+                      {/* HP Text */}
+                      <div className="text-xs font-mono text-center text-zinc-400">
+                        <span style={{ color: hpColor }} className="font-bold">{u.hp}</span>/<span className="text-zinc-500">{u.maxHp}</span>
+                      </div>
+
+                      {/* Resource (if applicable) */}
+                      {u.maxResource > 0 && (
+                        <div className="text-xs font-mono text-center mt-1 pt-1 border-t border-zinc-800">
+                          <span style={{ color: '#e8a736' }} className="font-bold">{u.resource}/{u.maxResource}</span>
+                          <span className="text-zinc-600 ml-1">{u.resourceName}</span>
+                        </div>
+                      )}
+
+                      {/* Turn Indicator */}
+                      {isActive && (
+                        <div className="text-xs font-mono text-center text-yellow-500 font-bold mt-1 pt-1 border-t border-yellow-500/30 bg-yellow-500/10">
+                          ▶ YOUR TURN
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Bottom dock: dialog + skills ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '160px' }}>
+      {/* ── Bottom Dock: Dialog + Hand ── */}
+      <div className="grid grid-cols-3 border-t border-zinc-800 bg-zinc-900/80 backdrop-blur-sm min-h-48">
 
-        {/* Dialog box (left) */}
-        <div style={{
-          borderRight: `1px solid ${C.line}`, borderTop: `1px solid ${C.line}`,
-          padding: '18px 22px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-          background: C.bg,
-        }}>
+        {/* Dialog Box (Left) */}
+        <div className="col-span-1 border-r border-zinc-800 p-5 flex flex-col justify-between bg-gradient-to-b from-zinc-900/50 to-zinc-950">
           <div>
-            {/* latest log line shown large like Pokémon dialog */}
             {lastLog && (
-              <p style={{ fontFamily: MONO, fontSize: '13px', color: C.ink, lineHeight: 1.6, margin: 0 }}>
+              <p className="font-mono text-sm text-zinc-100 leading-relaxed">
                 {lastLog.text}
               </p>
             )}
           </div>
 
-          {/* scroll hint / phase label */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+          {/* Status Line */}
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-800">
             {phase === 'select' && isPlayerTurn && currentActor && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.1em' }}>
-                <span style={{ color: currentActor.factionColor }}>{currentActor.name}</span>
-                {pendingSkill && <span style={{ color: C.gold }}> · {pendingSkill.name}</span>}
-                {targetId && <span style={{ color: C.gold }}> → {enemies.find(e => e.id === targetId)?.name ?? '?'}</span>}
-              </span>
+              <div className="text-xs font-mono tracking-tight text-zinc-400">
+                <span style={{ color: currentActor.factionColor }} className="font-bold">{currentActor.name}</span>
+                {pendingSkill && <span className="text-yellow-500"> • {pendingSkill.name}</span>}
+                {targetId && <span className="text-yellow-500"> → {enemies.find(e => e.id === targetId)?.name ?? '?'}</span>}
+              </div>
             )}
             {phase === 'select' && !isPlayerTurn && currentActor && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim }}>
-                <span style={{ color: C.blood }}>{currentActor.name}</span> is acting...
+              <span className="text-xs font-mono text-zinc-500">
+                <span style={{ color: C.blood }} className="font-bold">{currentActor.name}</span> is acting...
               </span>
             )}
             {phase === 'resolving' && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em' }}>▶▶</span>
+              <span className="text-xs font-mono text-zinc-500 tracking-widest">▶▶ RESOLVING</span>
             )}
-            {(phase === 'victory' || phase === 'defeat') && <span />}
-            {/* log scroll indicator */}
-            <span style={{ fontFamily: MONO, fontSize: '10px', color: C.dim }}>▼</span>
           </div>
         </div>
 
-        {/* Skill / action panel (right — shown on player turn, else log) */}
-        <div style={{ borderTop: `1px solid ${C.line}`, background: C.bg2 }}>
-          {phase === 'select' && activePlayer && activePlayer.hp > 0
-            ? (
-              <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>What will {activePlayer.name} do?</span>
-                  <button
-                    onClick={() => canExecute && doResolve(pendingSkill!, targetId)}
-                    disabled={!canExecute}
-                    style={{
-                      padding: '6px 20px',
-                      background: canExecute ? C.gold : C.bg,
-                      color: canExecute ? '#0b0d10' : C.dim,
-                      border: `1px solid ${canExecute ? C.gold : C.line}`,
-                      cursor: canExecute ? 'pointer' : 'not-allowed',
-                      fontFamily: DISPLAY, fontSize: '16px', letterSpacing: '0.06em', transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => { if (canExecute) e.currentTarget.style.boxShadow = `0 0 12px ${C.gold}44` }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
-                  >
-                    FIGHT
-                  </button>
-                </div>
-                {/* skill grid — 2 cols */}
-                {activePlayer.skills.length === 0
-                  ? <div style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, textAlign: 'center', padding: '16px', border: `1px dashed ${C.line}` }}>No skills</div>
-                  : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', flex: 1 }}>
-                      {activePlayer.skills.map(sk => {
-                        const isPicked  = pendingSkill?.id === sk.id
-                        const canAfford = activePlayer.maxResource === 0 || activePlayer.resource >= sk.cost
-                        const fc = activePlayer.factionColor
-                        return (
-                          <button
-                            key={sk.id}
-                            onClick={() => canAfford && setPendingSkill(sk)}
-                            disabled={!canAfford}
-                            style={{
-                              padding: '10px 12px',
-                              background: isPicked ? `${fc}22` : C.bg,
-                              border: `2px solid ${isPicked ? fc : C.line}`,
-                              color: isPicked ? fc : canAfford ? C.ink : C.dim,
-                              cursor: canAfford ? 'pointer' : 'not-allowed',
-                              fontFamily: MONO, fontSize: '10px', textAlign: 'left',
-                              display: 'flex', flexDirection: 'column', gap: '2px',
-                              transition: 'all 0.1s',
-                              opacity: canAfford ? 1 : 0.35,
-                            }}
-                            onMouseEnter={e => { if (canAfford && !isPicked) e.currentTarget.style.borderColor = `${fc}88` }}
-                            onMouseLeave={e => { if (!isPicked) e.currentTarget.style.borderColor = C.line }}
-                          >
-                            <span style={{ fontFamily: DISPLAY, fontSize: '15px', letterSpacing: '0.04em' }}>{sk.name}</span>
-                            <span style={{ color: C.gold, fontSize: '8px' }}>
-                              PWR {sk.basePower}{sk.cost > 0 ? ` · ${sk.cost}${activePlayer.resourceName.charAt(0)}` : ''}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                }
+        {/* Combat Log (Middle) */}
+        <div className="col-span-1 border-r border-zinc-800 overflow-hidden bg-zinc-950/50">
+          {phase === 'select' && activePlayer && activePlayer.hp > 0 ? (
+            <div className="p-5 text-center text-zinc-500 font-mono text-sm">
+              <p>Select a skill and target to continue</p>
+            </div>
+          ) : (
+            <CombatLog entries={log} />
+          )}
+        </div>
+
+        {/* Hand / Skills (Right) */}
+        <div className="col-span-1 p-5 flex flex-col bg-gradient-to-b from-emerald-950/20 to-transparent">
+          {phase === 'select' && activePlayer && activePlayer.hp > 0 ? (
+            <div className="flex flex-col gap-3 h-full">
+              {/* Header + Execute Button */}
+              <div className="flex items-center justify-between gap-3 pb-3 border-b border-emerald-900/30">
+                <span className="text-xs font-mono tracking-widest uppercase text-zinc-500">Hand</span>
+                <button
+                  onClick={() => canExecute && doResolve(pendingSkill!, targetId)}
+                  disabled={!canExecute}
+                  className={`px-4 py-2 rounded font-['Bebas_Neue'] text-base tracking-wide transition-all duration-200 ${
+                    canExecute
+                      ? 'bg-yellow-600 hover:bg-yellow-500 text-black shadow-lg shadow-yellow-500/30 cursor-pointer'
+                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  ATTACK
+                </button>
               </div>
-            )
-            : (
-              /* Log panel when not player's skill-select turn */
-              <CombatLog entries={log} />
-            )
-          }
+
+              {/* Skills as Cards */}
+              {activePlayer.skills.length === 0 ? (
+                <div className="flex items-center justify-center flex-1 text-zinc-600 font-mono text-sm">No skills</div>
+              ) : (
+                <div className="flex flex-wrap gap-2 flex-1 content-start overflow-y-auto">
+                  {activePlayer.skills.map(sk => {
+                    const isPicked = pendingSkill?.id === sk.id
+                    const canAfford = activePlayer.maxResource === 0 || activePlayer.resource >= sk.cost
+                    const fc = activePlayer.factionColor
+
+                    return (
+                      <button
+                        key={sk.id}
+                        onClick={() => canAfford && setPendingSkill(sk)}
+                        disabled={!canAfford}
+                        className={`flex-1 min-w-28 p-3 rounded-lg border-2 transition-all duration-200 flex flex-col gap-1.5 text-left ${
+                          isPicked
+                            ? `border-yellow-500 bg-yellow-500/15 shadow-lg shadow-yellow-500/20`
+                            : canAfford
+                            ? `border-emerald-900/40 hover:border-emerald-600/60 bg-emerald-950/10 hover:bg-emerald-950/20`
+                            : `border-zinc-800 bg-zinc-900 opacity-35 cursor-not-allowed`
+                        }`}
+                      >
+                        <div className="font-['Bebas_Neue'] text-sm tracking-wide" style={{ color: isPicked ? '#e8a736' : C.ink }}>
+                          {sk.name}
+                        </div>
+                        <div className="text-xs font-mono text-zinc-400">
+                          <span style={{ color: '#e8a736' }} className="font-bold">PWR {sk.basePower}</span>
+                          {sk.cost > 0 && (
+                            <>
+                              <span className="mx-1">·</span>
+                              <span style={{ color: canAfford ? '#e8a736' : '#666' }}>
+                                {sk.cost}<span className="text-xs text-zinc-600">{activePlayer.resourceName.charAt(0)}</span>
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-zinc-600 font-mono text-sm">
+              {phase === 'victory' ? '★ VICTORY' : phase === 'defeat' ? '✕ DEFEAT' : 'Waiting...'}
+            </div>
+          )}
         </div>
       </div>
     </div>
