@@ -86,7 +86,7 @@ interface EnemyWave {
   slots: EnemySlot[]
 }
 
-export interface SimConfig {
+interface SimConfig {
   charSlots: [CharSlot, CharSlot, CharSlot]
   enemySlotCount: number
   waveCount: number
@@ -645,212 +645,6 @@ function SmootHpBar({ current, max, color }: { current: number; max: number; col
       <span style={{ fontFamily: MONO, fontSize: '8px', color, flexShrink: 0, minWidth: '56px', textAlign: 'right' }}>
         {current}<span style={{ color: C.dim }}>/{max}</span>
       </span>
-    </div>
-  )
-}
-
-// ── Pokemon-style HP box (compact name + HP bar) ────────────────────────────
-
-function PokeHpBox({
-  unit, isTargetable, isTargeted, isActive, onTargetClick,
-}: {
-  unit: CombatUnit
-  isTargetable: boolean
-  isTargeted: boolean
-  isActive: boolean
-  onTargetClick?: () => void
-}) {
-  const isDead = unit.hp <= 0
-  const hpPct = Math.max(0, unit.hp / unit.maxHp)
-  const hpColor = hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood
-
-  return (
-    <div
-      onClick={() => isTargetable && !isDead && onTargetClick?.()}
-      style={{
-        cursor: isTargetable && !isDead ? 'pointer' : 'default',
-        userSelect: 'none',
-        transition: 'all 0.15s ease',
-      }}
-    >
-      <div style={{
-        display: 'flex', flexDirection: 'column', gap: '3px',
-        padding: '6px 8px',
-        background: isTargeted ? `${C.gold}0a` : isActive ? `${unit.factionColor}08` : 'transparent',
-        border: `1px solid ${isTargeted ? C.gold : isActive ? unit.factionColor : C.line}`,
-        opacity: isDead ? 0.4 : 1,
-        transition: 'all 0.15s ease',
-        boxShadow: isTargeted ? `0 0 12px ${C.gold}44` : 'none',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'space-between' }}>
-          <span style={{
-            fontFamily: MONO, fontSize: '8px', color: isDead ? C.dim : C.ink,
-            letterSpacing: '0.08em', maxWidth: '96px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {unit.name}
-          </span>
-          <span style={{ fontFamily: MONO, fontSize: '7px', color: hpColor, flexShrink: 0 }}>
-            {Math.max(0, unit.hp)}/{unit.maxHp}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '1px', height: '6px' }}>
-          {Array.from({ length: 10 }).map((_, i) => {
-            const segFilled = i < Math.ceil(hpPct * 10)
-            return (
-              <div key={i} style={{
-                flex: 1, height: '6px',
-                background: segFilled ? hpColor : C.bg3,
-                border: `0.5px solid ${segFilled ? `${hpColor}88` : C.line}`,
-              }} />
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Arena Battler (animated sprite with stance) ────────────────────────────
-
-function ArenaBattler({
-  unit, side, isActive, isTargetable, isTargeted, onTargetClick,
-}: {
-  unit: CombatUnit
-  side: 'front' | 'back'
-  isActive: boolean
-  isTargetable: boolean
-  isTargeted: boolean
-  onTargetClick?: () => void
-}) {
-  const isDead = unit.hp <= 0
-  const hpPct = Math.max(0, unit.hp / unit.maxHp)
-
-  return (
-    <div
-      onClick={() => isTargetable && !isDead && onTargetClick?.()}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-        cursor: isTargetable && !isDead ? 'pointer' : 'default',
-        position: 'relative',
-      }}
-    >
-      {/* Sprite container with animation */}
-      <div style={{
-        position: 'relative',
-        width: '120px', height: '140px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        filter: isDead
-          ? 'grayscale(1) opacity(0.25)'
-          : isTargeted
-            ? `drop-shadow(0 0 16px ${C.gold})`
-            : isActive
-              ? `drop-shadow(0 0 12px ${unit.factionColor})`
-              : 'drop-shadow(0 0 4px rgba(0,0,0,0.5))',
-        transition: 'all 0.3s ease',
-        transform: isActive
-          ? 'scale(1.08) translateY(-4px)'
-          : isTargeted
-            ? 'scale(1.04)'
-            : 'scale(1)',
-        animation: isActive
-          ? `float-active 0.8s ease-in-out infinite`
-          : 'none',
-      }}>
-        {/* Pulse ring for active unit */}
-        {isActive && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            border: `2px solid ${unit.factionColor}`,
-            borderRadius: '50%',
-            opacity: 0.4,
-            animation: 'pulse-ring 1.2s ease-out infinite',
-            pointerEvents: 'none',
-          }} />
-        )}
-
-        {/* Sprite artwork */}
-        {unit.art
-          ? (
-            <img
-              src={`/assets/${unit.isEnemy ? 'enemies' : 'characters'}/${unit.art}.png`}
-              alt={unit.name}
-              style={{
-                width: '100%', height: '100%',
-                objectFit: 'contain', imageRendering: 'pixelated',
-                opacity: isDead ? 0.3 : 1,
-                transition: 'opacity 0.2s',
-              }}
-            />
-          )
-          : (
-            <span style={{
-              fontFamily: DISPLAY, fontSize: '64px',
-              color: `${unit.factionColor}44`,
-            }}>
-              {unit.name.charAt(0)}
-            </span>
-          )
-        }
-
-        {/* HP indicator below sprite */}
-        {!isDead && (
-          <div style={{
-            position: 'absolute', bottom: '-28px',
-            width: '100%', display: 'flex', justifyContent: 'center',
-          }}>
-            <div style={{
-              width: '90%', height: '4px',
-              background: C.bg3, border: `1px solid ${C.line}`,
-              position: 'relative', overflow: 'hidden',
-            }}>
-              <div style={{
-                position: 'absolute', top: 0, left: 0, bottom: 0,
-                width: `${hpPct * 100}%`,
-                background: hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood,
-                transition: 'width 0.4s ease, background-color 0.4s ease',
-              }} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Target indicator */}
-      {isTargeted && (
-        <div style={{
-          fontFamily: MONO, fontSize: '7px', color: C.gold,
-          letterSpacing: '0.12em', textTransform: 'uppercase',
-          padding: '2px 6px', border: `1px solid ${C.gold}66`,
-          background: `${C.gold}08`, marginTop: '4px',
-        }}>
-          ▶ TARGET
-        </div>
-      )}
-
-      {/* Active indicator */}
-      {isActive && (
-        <div style={{
-          position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
-          width: '6px', height: '6px', background: C.gold,
-          borderRadius: '50%', boxShadow: `0 0 8px ${C.gold}`,
-          animation: 'pulse 0.8s ease-in-out infinite',
-        }} />
-      )}
-
-      {/* Styles for animations */}
-      <style>{`
-        @keyframes float-active {
-          0%, 100% { transform: translateY(-4px); }
-          50% { transform: translateY(0px); }
-        }
-        @keyframes pulse-ring {
-          0% { transform: scale(0.8); opacity: 0.6; }
-          100% { transform: scale(1.4); opacity: 0; }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(1.4); }
-        }
-      `}</style>
     </div>
   )
 }
@@ -1747,14 +1541,13 @@ export function CombatModule({ config, onRetry, onReset }: {
 
 type SimView = 'config' | 'combat'
 
-export function BattleSimulator({ onStart }: { onStart?: (config: SimConfig) => void } = {}) {
+export function BattleSimulator() {
   const [view, setView]               = useState<SimView>('config')
   const [activeConfig, setActiveConfig] = useState<SimConfig | null>(null)
 
   function handleStart(config: SimConfig) {
     setActiveConfig(config)
     setView('combat')
-    onStart?.(config)
   }
 
   function handleRetry() {

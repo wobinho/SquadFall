@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { BattleSimulator, CombatModule } from './BattleSim'
-import type { SimConfig } from './BattleSim'
+import { BattleSimulator } from './BattleSim'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -271,8 +270,7 @@ export default function AdminPage() {
   const router = useRouter()
 
   const [section, setSection]       = useState<AdminSection>('db')
-  const [battleTab, setBattleTab]   = useState<BattleSimTab>('simulator-config')
-  const [activeSimConfig, setActiveSimConfig] = useState<SimConfig | null>(null)
+  const [battleTab, setBattleTab]   = useState<BattleSimTab>('combat-module')
   const [schema, setSchema]         = useState<Schema>({})
   const [counts, setCounts]         = useState<Counts>({})
   const [activeTable, setActiveTable] = useState<string>('users')
@@ -557,20 +555,12 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {battleTab === 'simulator-config' && <BattleSimulator onStart={(config) => { setActiveSimConfig(config); setBattleTab('combat-module') }} />}
+              {battleTab === 'simulator-config' && <BattleSimulator />}
 
               {battleTab === 'combat-module' && (
-                activeSimConfig ? (
-                  <CombatModule
-                    config={activeSimConfig}
-                    onRetry={() => setActiveSimConfig({ ...activeSimConfig })}
-                    onReset={() => { setActiveSimConfig(null); setBattleTab('simulator-config') }}
-                  />
-                ) : (
-                  <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed #2a2020', color: '#3a3030', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.2em' }}>
-                    ◉ Configure and launch a simulation from the Simulator Config tab first.
-                  </div>
-                )
+                <div style={{ padding: '40px', textAlign: 'center', border: '1px dashed #2a2020', color: '#3a3030', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.2em' }}>
+                  ◉ Configure and launch a simulation from the Simulator Config tab first.
+                </div>
               )}
 
               {battleTab === 'enemy-view' && (
