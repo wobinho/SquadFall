@@ -111,6 +111,13 @@ interface CombatUnit {
   skills: CombatSkill[]
   slotIndex: number
   waveIndex?: number
+  // gear info for display in combat
+  gear1Name?: string
+  gear2Name?: string
+  gear1Resource?: number
+  gear2Resource?: number
+  gear1ResourceName?: string
+  gear2ResourceName?: string
 }
 
 interface CombatSkill {
@@ -118,6 +125,7 @@ interface CombatSkill {
   name: string
   basePower: number
   cost: number
+  gearSlot?: 0 | 1
 }
 
 interface CombatLogEntry {
@@ -126,64 +134,72 @@ interface CombatLogEntry {
   type: 'action' | 'damage' | 'miss' | 'crit' | 'info' | 'wave' | 'victory' | 'defeat'
 }
 
-// ── Style tokens ───────────────────────────────────────────────────────────────
+// ── Gear accent helpers ────────────────────────────────────────────────────────
+// Gear 1 = amber (warm gold), Gear 2 = sky (cool cyan)
 
-const C = {
-  bg:      '#08090b',
-  bg2:     '#0a0c10',
-  bg3:     '#0f1115',
-  ink:     '#f2f0ea',
-  muted:   '#8a8e96',
-  dim:     '#5a5e66',
-  line:    '#1e2228',
-  lineStr: '#2a2f38',
-  gold:    '#e8a736',
-  blood:   '#c53030',
-  green:   '#6b8a3a',
-}
-
-const MONO    = "'JetBrains Mono', monospace"
-const DISPLAY = "'Bebas Neue', sans-serif"
+const GEAR_LABEL_CLASS = ['text-amber-400', 'text-sky-400'] as const
+const GEAR_BORDER_CLASS = ['border-amber-500/40', 'border-sky-500/40'] as const
+const GEAR_BG_CLASS = ['bg-amber-500/5', 'bg-sky-500/5'] as const
+const GEAR_BADGE_CLASS = ['bg-amber-500/15 border-amber-500/40 text-amber-400', 'bg-sky-500/15 border-sky-500/40 text-sky-400'] as const
+const GEAR_RESOURCE_CLASS = ['text-amber-300', 'text-sky-300'] as const
+const GEAR_RESOURCE_BAR_CLASS = ['bg-amber-400', 'bg-sky-400'] as const
+const GEAR_SKILL_HOVER = ['hover:border-amber-500/60', 'hover:border-sky-500/60'] as const
+const GEAR_SKILL_ACTIVE = ['border-amber-400 bg-amber-400/10 text-amber-300', 'border-sky-400 bg-sky-400/10 text-sky-300'] as const
 
 // ── Small shared UI ────────────────────────────────────────────────────────────
 
-function StatPill({ label, value, color = C.gold }: { label: string; value: string | number; color?: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: C.bg2, border: `1px solid ${color}22`, padding: '4px 10px', minWidth: '48px' }}>
-      <span style={{ fontFamily: MONO, fontSize: '7px', letterSpacing: '0.2em', color: C.dim, textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontFamily: DISPLAY, fontSize: '18px', color, lineHeight: 1 }}>{value}</span>
-    </div>
-  )
-}
-
 function SectionHead({ label }: { label: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-      <div style={{ width: '10px', height: '1px', background: C.gold }} />
-      <span style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: C.dim }}>{label}</span>
-      <div style={{ flex: 1, height: '1px', background: C.line }} />
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-2 h-px bg-warn" />
+      <span className="font-mono text-[8px] tracking-[0.3em] uppercase text-dim">{label}</span>
+      <div className="flex-1 h-px bg-line" />
     </div>
   )
 }
 
-function HpBar({ current, max, color }: { current: number; max: number; color: string }) {
-  const pct   = Math.max(0, Math.min(1, current / max))
-  const segs  = 20
-  const filled = Math.round(pct * segs)
+function StatChip({ label, value, className = 'text-warn' }: { label: string; value: string | number; className?: string }) {
   return (
-    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '1px', flex: 1 }}>
-        {Array.from({ length: segs }).map((_, i) => (
-          <div key={i} style={{
-            flex: 1, height: '5px',
-            background: i < filled ? (i === filled - 1 ? color : `${color}88`) : C.bg2,
-            border: `1px solid ${i < filled ? `${color}44` : C.line}`,
-          }} />
-        ))}
+    <div className="flex flex-col items-center bg-bg border border-line px-2 py-1 min-w-[44px]">
+      <span className="font-mono text-[7px] tracking-widest text-dim uppercase">{label}</span>
+      <span className={`font-display text-base leading-none ${className}`}>{value}</span>
+    </div>
+  )
+}
+
+function SmootHpBar({ current, max, className = 'bg-success' }: { current: number; max: number; className?: string }) {
+  const pct = Math.max(0, Math.min(1, current / max))
+  const color = pct > 0.5 ? 'bg-success' : pct > 0.2 ? 'bg-warn' : 'bg-blood'
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-[7px] text-dim w-3 shrink-0">HP</span>
+      <div className="flex-1 h-[6px] bg-bg3 border border-line relative overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 ${color} transition-[width] duration-500`}
+          style={{ width: `${pct * 100}%` }}
+        />
       </div>
-      <span style={{ fontFamily: MONO, fontSize: '9px', color, flexShrink: 0, marginLeft: '6px', minWidth: '64px', textAlign: 'right' }}>
-        {current}/{max}
+      <span className={`font-mono text-[9px] ${color} shrink-0 min-w-[52px] text-right`}>
+        {current}<span className="text-dim">/{max}</span>
       </span>
+    </div>
+  )
+}
+
+function ResourceBar({ current, max, name, gearIdx }: { current: number; max: number; name: string; gearIdx: 0 | 1 }) {
+  const pct = Math.max(0, Math.min(1, max > 0 ? current / max : 0))
+  const barClass = GEAR_RESOURCE_BAR_CLASS[gearIdx]
+  const textClass = GEAR_RESOURCE_CLASS[gearIdx]
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`font-mono text-[7px] ${textClass} w-3 shrink-0`}>{name.slice(0, 2).toUpperCase()}</span>
+      <div className="flex-1 h-[4px] bg-bg3 border border-line relative overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 ${barClass} transition-[width] duration-500`}
+          style={{ width: `${pct * 100}%` }}
+        />
+      </div>
+      <span className={`font-mono text-[9px] ${textClass} shrink-0 min-w-[36px] text-right`}>{current}/{max}</span>
     </div>
   )
 }
@@ -191,13 +207,14 @@ function HpBar({ current, max, color }: { current: number; max: number; color: s
 // ── Selector Dropdown ──────────────────────────────────────────────────────────
 
 function Selector<T extends { id: number; name: string }>({
-  options, selected, onSelect, placeholder, accent = C.gold, getArt,
+  options, selected, onSelect, placeholder, accentClass = 'text-warn', borderActiveClass = 'border-warn', getArt,
 }: {
   options: T[]
   selected: T | null
   onSelect: (item: T | null) => void
   placeholder: string
-  accent?: string
+  accentClass?: string
+  borderActiveClass?: string
   getArt?: (item: T) => string | null
 }) {
   const [open, setOpen] = useState(false)
@@ -211,41 +228,24 @@ function Selector<T extends { id: number; name: string }>({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  function Thumb({ item, size = 20 }: { item: T; size?: number }) {
-    const art = getArt?.(item) ?? null
-    if (!art) return null
-    return <img src={art} alt="" style={{ width: size, height: size, objectFit: 'cover', flexShrink: 0, imageRendering: 'pixelated' }} />
-  }
-
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', padding: '6px 10px', textAlign: 'left',
-          background: selected ? C.bg3 : C.bg2,
-          border: `1px solid ${open ? accent : C.line}`,
-          color: selected ? C.ink : C.dim,
-          cursor: 'pointer', fontFamily: MONO, fontSize: '10px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px',
-          transition: 'border-color 0.1s',
-        }}
+        className={`w-full px-2.5 py-1.5 text-left bg-bg2 border ${open ? borderActiveClass : 'border-line'} text-[10px] font-mono flex justify-between items-center gap-2 cursor-pointer transition-colors`}
       >
-        {selected && getArt && <Thumb item={selected} size={18} />}
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+        {selected && getArt && getArt(selected) && (
+          <img src={getArt(selected)!} alt="" className="w-4 h-4 object-cover shrink-0 pixelated" />
+        )}
+        <span className={`overflow-hidden text-ellipsis whitespace-nowrap flex-1 ${selected ? 'text-ink' : 'text-dim'}`}>
           {selected ? selected.name : placeholder}
         </span>
-        <span style={{ color: C.dim, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
+        <span className="text-dim shrink-0 text-[9px]">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
         <div
-          style={{
-            position: 'fixed', zIndex: 10000,
-            background: C.bg2, border: `1px solid ${accent}44`,
-            maxHeight: '200px', overflowY: 'auto', minWidth: '200px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-          }}
+          className="fixed z-[10000] bg-bg2 border border-warn/20 max-h-48 overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
           ref={(el) => {
             if (el && ref.current) {
               const r = ref.current.getBoundingClientRect()
@@ -258,35 +258,25 @@ function Selector<T extends { id: number; name: string }>({
           {selected && (
             <button
               onClick={() => { onSelect(null); setOpen(false) }}
-              style={{
-                width: '100%', padding: '6px 10px', textAlign: 'left',
-                background: 'none', border: 'none', borderBottom: `1px solid ${C.line}`,
-                color: C.blood, cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.1em',
-              }}
-            >✕ Clear</button>
+              className="w-full px-2.5 py-1.5 text-left bg-transparent border-b border-line text-blood text-[9px] tracking-wide font-mono cursor-pointer hover:bg-blood/10 transition-colors"
+            >
+              ✕ Clear
+            </button>
           )}
           {options.map(opt => (
             <button
               key={opt.id}
               onClick={() => { onSelect(opt); setOpen(false) }}
-              style={{
-                width: '100%', padding: '5px 10px', textAlign: 'left',
-                background: selected?.id === opt.id ? `${accent}15` : 'none',
-                border: 'none', borderBottom: `1px solid ${C.line}`,
-                color: selected?.id === opt.id ? accent : C.muted,
-                cursor: 'pointer', fontFamily: MONO, fontSize: '10px',
-                display: 'flex', alignItems: 'center', gap: '8px',
-                transition: 'background 0.1s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${accent}10` }}
-              onMouseLeave={e => { e.currentTarget.style.background = selected?.id === opt.id ? `${accent}15` : 'none' }}
+              className={`w-full px-2.5 py-1 text-left border-b border-line text-[10px] font-mono flex items-center gap-2 cursor-pointer transition-colors ${selected?.id === opt.id ? `${accentClass} bg-warn/5` : 'text-muted hover:bg-warn/5'}`}
             >
-              {getArt && <Thumb item={opt} size={22} />}
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.name}</span>
+              {getArt && getArt(opt) && (
+                <img src={getArt(opt)!} alt="" className="w-5 h-5 object-cover shrink-0 pixelated" />
+              )}
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">{opt.name}</span>
             </button>
           ))}
           {options.length === 0 && (
-            <div style={{ padding: '10px', color: C.dim, fontFamily: MONO, fontSize: '9px', textAlign: 'center' }}>No options</div>
+            <div className="px-3 py-2.5 text-dim font-mono text-[9px] text-center">No options</div>
           )}
         </div>
       )}
@@ -295,85 +285,104 @@ function Selector<T extends { id: number; name: string }>({
 }
 
 // ── Gear Slot Panel (config) ───────────────────────────────────────────────────
-// Each gear panel is independent — its own resource display and skill list.
 
 function GearSlotPanel({
-  slotLabel, gearSlot, gears, skills, onGearChange, onSkillChange, accent,
+  gearIdx, gearSlot, gears, skills, onGearChange, onSkillChange,
 }: {
-  slotLabel: string
+  gearIdx: 0 | 1
   gearSlot: GearSlot
   gears: SimGear[]
   skills: SimSkill[]
   onGearChange: (gear: SimGear | null) => void
   onSkillChange: (skillIdx: number, skill: SimSkill | null) => void
-  accent: string
 }) {
   const g = gearSlot.gear
+  const labelClass = GEAR_LABEL_CLASS[gearIdx]
+  const borderClass = GEAR_BORDER_CLASS[gearIdx]
+  const bgClass = GEAR_BG_CLASS[gearIdx]
+  const badgeClass = GEAR_BADGE_CLASS[gearIdx]
+  const resourceTextClass = GEAR_RESOURCE_CLASS[gearIdx]
+  const borderActiveClass = gearIdx === 0 ? 'border-amber-400' : 'border-sky-400'
+  const accentClass = gearIdx === 0 ? 'text-amber-400' : 'text-sky-400'
+
   return (
-    <div style={{
-      flex: 1, border: `1px solid ${accent}33`, background: C.bg2,
-      display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px',
-    }}>
-      {/* header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-        <div style={{ width: '3px', height: '3px', background: accent, transform: 'rotate(45deg)', flexShrink: 0 }} />
-        <span style={{ fontFamily: MONO, fontSize: '8px', letterSpacing: '0.2em', color: accent, textTransform: 'uppercase' }}>{slotLabel}</span>
+    <div className={`flex-1 border ${borderClass} ${bgClass} flex flex-col gap-2 p-3`}>
+      {/* Header */}
+      <div className="flex items-center gap-1.5">
+        <div className={`w-2 h-2 border ${borderActiveClass} rotate-45 shrink-0`} />
+        <span className={`font-mono text-[8px] tracking-[0.2em] uppercase ${labelClass} font-semibold`}>
+          Gear {gearIdx + 1}
+        </span>
+        {g && (
+          <span className={`ml-auto font-mono text-[7px] tracking-wide px-1.5 py-0.5 border ${badgeClass}`}>
+            {g.category}
+          </span>
+        )}
       </div>
 
-      {/* gear picker */}
       <Selector
         options={gears}
         selected={g}
         onSelect={onGearChange}
         placeholder="— No Gear —"
-        accent={accent}
+        accentClass={accentClass}
+        borderActiveClass={borderActiveClass}
         getArt={item => item.art ? `/assets/gears/${item.art}.png` : null}
       />
 
-      {/* gear stats — only shown when a gear is selected */}
       {g && (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          <div style={{ background: C.bg, border: `1px solid ${accent}22`, padding: '3px 7px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>ATK </span>
-            <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: accent }}>{g.statAttack}</span>
+        <>
+          {/* Gear stats */}
+          <div className="flex gap-1.5 flex-wrap">
+            <div className={`bg-bg border ${borderClass} px-2 py-1 flex items-baseline gap-1`}>
+              <span className="font-mono text-[7px] text-dim">ATK</span>
+              <span className={`font-display text-base leading-none ${labelClass}`}>{g.statAttack}</span>
+            </div>
+            {g.critChance > 0 && (
+              <div className="bg-bg border border-blood/30 px-2 py-1 flex items-baseline gap-1">
+                <span className="font-mono text-[7px] text-dim">CRIT</span>
+                <span className="font-display text-base leading-none text-blood">{g.critChance}%</span>
+              </div>
+            )}
           </div>
+
+          {/* Resource pool — visually distinct per gear */}
           {g.resourcePoolSize > 0 && (
-            <div style={{ background: C.bg, border: `1px solid ${C.gold}33`, padding: '3px 7px' }}>
-              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>{g.resourceName} </span>
-              <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: C.gold }}>{g.resourcePoolSize}</span>
+            <div className={`border ${borderClass} bg-bg p-2 flex flex-col gap-1`}>
+              <div className="flex items-center justify-between">
+                <span className={`font-mono text-[7px] tracking-widest uppercase ${resourceTextClass}`}>{g.resourceName}</span>
+                <span className={`font-display text-sm leading-none ${resourceTextClass}`}>{g.resourcePoolSize}</span>
+              </div>
+              <div className="w-full h-[3px] bg-bg3 border border-line relative">
+                <div className={`absolute inset-y-0 left-0 w-full ${GEAR_RESOURCE_BAR_CLASS[gearIdx]}`} />
+              </div>
+              {g.resourceRegenRate > 0 && (
+                <span className="font-mono text-[7px] text-dim">+{g.resourceRegenRate}/turn</span>
+              )}
             </div>
           )}
-          {g.critChance > 0 && (
-            <div style={{ background: C.bg, border: `1px solid ${C.blood}22`, padding: '3px 7px' }}>
-              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim }}>CRIT </span>
-              <span style={{ fontFamily: DISPLAY, fontSize: '15px', color: C.blood }}>{g.critChance}%</span>
-            </div>
-          )}
-        </div>
+        </>
       )}
 
-      {/* skill slots — always 3, disabled when no gear */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-          Skills
-        </span>
+      {/* Skill slots */}
+      <div className="flex flex-col gap-1.5">
+        <span className="font-mono text-[7px] text-dim tracking-[0.2em] uppercase">Skills</span>
         {[0, 1, 2].map(si => (
-          <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, width: '12px' }}>{si + 1}.</span>
-            <div style={{ flex: 1 }}>
+          <div key={si} className="flex items-center gap-1.5">
+            <span className="font-mono text-[7px] text-dim shrink-0 w-3">{si + 1}.</span>
+            <div className="flex-1">
               <Selector
                 options={skills}
                 selected={gearSlot.skills[si]}
                 onSelect={sk => onSkillChange(si, sk)}
                 placeholder={g ? '— Infuse Skill —' : '— No Gear —'}
-                accent={C.gold}
+                accentClass={accentClass}
+                borderActiveClass={borderActiveClass}
                 getArt={sk => sk.art ? `/assets/skills/${sk.art}.png` : null}
               />
             </div>
             {gearSlot.skills[si] && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.gold, flexShrink: 0 }}>
-                {gearSlot.skills[si]!.basePower}p
-              </span>
+              <span className={`font-mono text-[8px] ${labelClass} shrink-0`}>{gearSlot.skills[si]!.basePower}p</span>
             )}
           </div>
         ))}
@@ -394,78 +403,82 @@ function CharSlotPanel({
   onGearChange: (gearIdx: 0 | 1, gear: SimGear | null) => void
   onSkillChange: (gearIdx: 0 | 1, skillIdx: number, skill: SimSkill | null) => void
 }) {
-  const fc  = charSlot.character?.factionColor ?? C.lineStr
-  const ch  = charSlot.character
+  const ch = charSlot.character
+  const hasGear1 = !!charSlot.gears[0].gear
+  const hasGear2 = !!charSlot.gears[1].gear
 
   return (
-    <div style={{ border: `1px solid ${fc}44`, background: C.bg, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ height: '2px', background: `linear-gradient(90deg, ${fc}, ${fc}44, transparent)` }} />
+    <div className="border border-line bg-bg flex flex-col overflow-hidden">
+      {/* Top accent strip using faction color */}
+      <div
+        className="h-0.5 w-full"
+        style={{ background: ch ? `linear-gradient(90deg, ${ch.factionColor}, ${ch.factionColor}44, transparent)` : undefined }}
+      />
 
-      <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-        {/* slot label + faction */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontFamily: DISPLAY, fontSize: '20px', color: C.dim, letterSpacing: '0.06em' }}>SLOT {slotIdx + 1}</span>
+      <div className="p-3.5 flex flex-col gap-3">
+        {/* Slot label row */}
+        <div className="flex items-center gap-2">
+          <span className="font-display text-xl text-dim tracking-wider">SLOT {slotIdx + 1}</span>
           {ch && (
-            <span style={{ fontFamily: MONO, fontSize: '8px', color: fc, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            <span className="font-mono text-[8px] tracking-[0.15em] uppercase ml-1" style={{ color: ch.factionColor }}>
               {ch.factionName}
             </span>
           )}
+          {/* Gear presence badges */}
+          <div className="flex gap-1 ml-auto">
+            <span className={`font-mono text-[7px] px-1.5 py-0.5 border ${hasGear1 ? 'border-amber-500/50 text-amber-400 bg-amber-500/10' : 'border-line text-dim'}`}>G1</span>
+            <span className={`font-mono text-[7px] px-1.5 py-0.5 border ${hasGear2 ? 'border-sky-500/50 text-sky-400 bg-sky-500/10' : 'border-line text-dim'}`}>G2</span>
+          </div>
         </div>
 
-        {/* character picker */}
         <Selector
           options={simData.characters}
           selected={ch}
           onSelect={onCharChange}
           placeholder="— Select Character —"
-          accent={fc}
+          accentClass={ch ? '' : 'text-warn'}
+          borderActiveClass="border-warn"
           getArt={c => c.art ? `/assets/characters/${c.art}.png` : null}
         />
 
         {ch && (
           <>
-            {/* art + name + stats row */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <div style={{
-                width: '72px', height: '72px', flexShrink: 0,
-                background: `linear-gradient(135deg, ${fc}22, ${C.bg2})`,
-                border: `1px solid ${fc}44`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
+            {/* Character card: art + name + stats */}
+            <div className="flex gap-3 items-start">
+              <div
+                className="w-16 h-16 shrink-0 border flex items-center justify-center overflow-hidden"
+                style={{ borderColor: `${ch.factionColor}44`, background: `linear-gradient(135deg, ${ch.factionColor}20, #0b0d10)` }}
+              >
                 {ch.art
-                  ? <img src={`/assets/characters/${ch.art}.png`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontFamily: DISPLAY, fontSize: '28px', color: `${fc}88` }}>{ch.name.charAt(0)}</span>
+                  ? <img src={`/assets/characters/${ch.art}.png`} alt="" className="w-full h-full object-cover pixelated" />
+                  : <span className="font-display text-3xl" style={{ color: `${ch.factionColor}88` }}>{ch.name.charAt(0)}</span>
                 }
               </div>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ fontFamily: DISPLAY, fontSize: '22px', color: C.ink, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ch.name}
-                </div>
-                <div style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.1em' }}>{ch.className}</div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  <StatPill label="HP"  value={ch.statHp}      color={C.blood} />
-                  <StatPill label="SPD" value={ch.statSpeed}   color={fc} />
-                  <StatPill label="DEF" value={ch.statDefense} color={C.muted} />
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                <div className="font-display text-xl text-ink tracking-wide overflow-hidden text-ellipsis whitespace-nowrap">{ch.name}</div>
+                <div className="font-mono text-[8px] text-dim tracking-wide">{ch.className}</div>
+                <div className="flex gap-1 flex-wrap">
+                  <StatChip label="HP"  value={ch.statHp}      className="text-blood" />
+                  <StatChip label="SPD" value={ch.statSpeed}   className="text-warn" />
+                  <StatChip label="DEF" value={ch.statDefense} className="text-muted" />
                 </div>
               </div>
             </div>
 
-            {/* HP bar preview */}
-            <HpBar current={ch.statHp} max={ch.statHp} color={C.green} />
+            {/* HP preview bar */}
+            <SmootHpBar current={ch.statHp} max={ch.statHp} />
 
-            {/* gears side by side — each fully independent */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+            {/* Gear panels side by side — each visually distinct */}
+            <div className="flex gap-2 items-stretch">
               {([0, 1] as const).map(gi => (
                 <GearSlotPanel
                   key={gi}
-                  slotLabel={`Gear ${gi + 1}`}
+                  gearIdx={gi}
                   gearSlot={charSlot.gears[gi]}
                   gears={simData.gears}
                   skills={simData.skills}
                   onGearChange={gear => onGearChange(gi, gear)}
                   onSkillChange={(si, skill) => onSkillChange(gi, si, skill)}
-                  accent={fc}
                 />
               ))}
             </div>
@@ -490,53 +503,78 @@ function EnemySlotCard({
 }) {
   const en = enemySlot.enemy
   return (
-    <div style={{ border: `1px solid ${C.blood}33`, background: C.bg, padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: '3px', height: '3px', background: C.blood, transform: 'rotate(45deg)' }} />
-        <span style={{ fontFamily: MONO, fontSize: '8px', color: C.blood, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Enemy {slotIdx + 1}</span>
-      </div>
+    <div className="border border-blood/25 bg-bg flex flex-col overflow-hidden">
+      {/* Blood accent strip */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-blood/60 via-blood/20 to-transparent" />
 
-      <Selector
-        options={enemies}
-        selected={en}
-        onSelect={onEnemyChange}
-        placeholder="— Select Enemy —"
-        accent={C.blood}
-      />
+      <div className="p-3 flex flex-col gap-2.5">
+        {/* Slot header */}
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 border border-blood/60 rotate-45 shrink-0" />
+          <span className="font-mono text-[8px] text-blood tracking-[0.15em] uppercase">Enemy {slotIdx + 1}</span>
+          {en && (
+            <span className="ml-auto font-mono text-[7px] text-dim border border-line px-1.5 py-0.5">{en.race}</span>
+          )}
+        </div>
 
-      {en && (
-        <>
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            <StatPill label="HP"  value={en.statHp}    color={C.blood} />
-            <StatPill label="ATK" value={en.statAtk}   color={C.blood} />
-            <StatPill label="DEF" value={en.statDef}   color={C.muted} />
-            <StatPill label="SPD" value={en.statSpeed} color={C.gold} />
+        {/* Enemy portrait + picker */}
+        {en && (
+          <div className="flex gap-2.5 items-center">
+            <div className="w-12 h-12 shrink-0 border border-blood/30 bg-blood/5 flex items-center justify-center overflow-hidden">
+              {en.art
+                ? <img src={`/assets/enemies/${en.art}.png`} alt="" className="w-full h-full object-contain pixelated" />
+                : <span className="font-display text-2xl text-blood/50">{en.name.charAt(0)}</span>
+              }
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <div className="font-display text-lg text-ink tracking-wide overflow-hidden text-ellipsis whitespace-nowrap">{en.name}</div>
+              <div className="font-mono text-[7px] text-dim">{en.type}</div>
+            </div>
           </div>
+        )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Skills</span>
-            {[0, 1, 2, 3].map(si => (
-              <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, width: '12px', flexShrink: 0 }}>{si + 1}.</span>
-                <div style={{ flex: 1 }}>
-                  <Selector
-                    options={enemySkills}
-                    selected={enemySlot.skills[si]}
-                    onSelect={skill => onSkillChange(si, skill)}
-                    placeholder="— No Skill —"
-                    accent={C.blood}
-                  />
+        <Selector
+          options={enemies}
+          selected={en}
+          onSelect={onEnemyChange}
+          placeholder="— Select Enemy —"
+          accentClass="text-blood"
+          borderActiveClass="border-blood"
+        />
+
+        {en && (
+          <>
+            <div className="flex gap-1 flex-wrap">
+              <StatChip label="HP"  value={en.statHp}    className="text-blood" />
+              <StatChip label="ATK" value={en.statAtk}   className="text-blood" />
+              <StatChip label="DEF" value={en.statDef}   className="text-muted" />
+              <StatChip label="SPD" value={en.statSpeed} className="text-warn" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="font-mono text-[7px] text-dim tracking-[0.2em] uppercase">Skills</span>
+              {[0, 1, 2, 3].map(si => (
+                <div key={si} className="flex items-center gap-1.5">
+                  <span className="font-mono text-[7px] text-dim w-3 shrink-0">{si + 1}.</span>
+                  <div className="flex-1">
+                    <Selector
+                      options={enemySkills}
+                      selected={enemySlot.skills[si]}
+                      onSelect={skill => onSkillChange(si, skill)}
+                      placeholder="— No Skill —"
+                      accentClass="text-blood"
+                      borderActiveClass="border-blood"
+                    />
+                  </div>
+                  {enemySlot.skills[si] && (
+                    <span className="font-mono text-[8px] text-blood shrink-0">{enemySlot.skills[si]!.basePower}p</span>
+                  )}
                 </div>
-                {enemySlot.skills[si] && (
-                  <span style={{ fontFamily: MONO, fontSize: '8px', color: C.blood, flexShrink: 0 }}>
-                    {enemySlot.skills[si]!.basePower}p
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -567,11 +605,11 @@ function buildCombatUnitsFromConfig(config: SimConfig): CombatUnit[] {
     const c = slot.character
 
     const skills: CombatSkill[] = []
-    slot.gears.forEach(gs => {
+    slot.gears.forEach((gs, gi) => {
       if (!gs.gear) return
       gs.skills.forEach(sk => {
         if (!sk) return
-        skills.push({ id: `${sk.id}-${gs.gear!.id}`, name: sk.name, basePower: sk.basePower, cost: sk.resourceCost })
+        skills.push({ id: `${sk.id}-${gs.gear!.id}`, name: sk.name, basePower: sk.basePower, cost: sk.resourceCost, gearSlot: gi as 0 | 1 })
       })
     })
 
@@ -593,6 +631,12 @@ function buildCombatUnitsFromConfig(config: SimConfig): CombatUnit[] {
       art: c.art,
       skills,
       slotIndex: si,
+      gear1Name: slot.gears[0].gear?.name,
+      gear2Name: slot.gears[1].gear?.name,
+      gear1Resource: slot.gears[0].gear?.resourcePoolSize,
+      gear2Resource: slot.gears[1].gear?.resourcePoolSize,
+      gear1ResourceName: slot.gears[0].gear?.resourceName,
+      gear2ResourceName: slot.gears[1].gear?.resourceName,
     })
   })
   return units
@@ -612,7 +656,7 @@ function buildWaveUnits(wave: EnemyWave, waveIdx: number): CombatUnit[] {
       speed: e.statSpeed,
       atk: e.statAtk, def: e.statDef,
       resource: 0, maxResource: 0, resourceRegen: 0, resourceName: '',
-      factionColor: C.blood,
+      factionColor: '#c53030',
       art: e.art,
       skills,
       slotIndex: si,
@@ -622,34 +666,13 @@ function buildWaveUnits(wave: EnemyWave, waveIdx: number): CombatUnit[] {
 }
 
 function calcDamage(attacker: CombatUnit, skill: CombatSkill, defender: CombatUnit) {
-  const base  = (attacker.atk + skill.basePower) - Math.floor(defender.def * 0.4)
-  const dmg   = Math.max(1, Math.floor(base * (0.85 + Math.random() * 0.3)))
+  const base = (attacker.atk + skill.basePower) - Math.floor(defender.def * 0.4)
+  const dmg  = Math.max(1, Math.floor(base * (0.85 + Math.random() * 0.3)))
   const isCrit = Math.random() < 0.15
   return { dmg: isCrit ? Math.floor(dmg * 1.6) : dmg, isCrit }
 }
 
-// ── Inline HP bar (smooth fill) ────────────────────────────────────────────────
-
-function SmootHpBar({ current, max, color }: { current: number; max: number; color: string }) {
-  const pct = Math.max(0, Math.min(1, current / max))
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.15em', flexShrink: 0, width: '14px' }}>HP</span>
-      <div style={{ flex: 1, height: '7px', background: C.bg3, border: `1px solid ${C.line}`, position: 'relative', overflow: 'hidden' }}>
-        <div style={{
-          position: 'absolute', top: 0, left: 0, bottom: 0,
-          width: `${pct * 100}%`, background: color,
-          transition: 'width 0.45s ease, background 0.45s ease',
-        }} />
-      </div>
-      <span style={{ fontFamily: MONO, fontSize: '8px', color, flexShrink: 0, minWidth: '56px', textAlign: 'right' }}>
-        {current}<span style={{ color: C.dim }}>/{max}</span>
-      </span>
-    </div>
-  )
-}
-
-// ── Enemy card — grid tile on top half ────────────────────────────────────────
+// ── Enemy Battle Card — compact tile showing portrait + name + HP ──────────────
 
 function EnemyBattleCard({
   unit, isTargetable, isTargeted, isActive, onTargetClick,
@@ -661,90 +684,65 @@ function EnemyBattleCard({
   onTargetClick?: () => void
 }) {
   const isDead = unit.hp <= 0
-  const fc = unit.factionColor
   const hpPct = Math.max(0, unit.hp / unit.maxHp)
-  const hpColor = hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood
 
   return (
     <div
       onClick={() => isTargetable && !isDead && onTargetClick?.()}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-        padding: '14px 12px 12px',
-        background: isTargeted ? `${C.gold}0a` : isActive ? `${fc}0a` : C.bg2,
-        border: `2px solid ${isTargeted ? C.gold : isActive ? fc : C.lineStr}`,
-        cursor: isTargetable && !isDead ? 'pointer' : 'default',
-        opacity: isDead ? 0.28 : 1,
-        transition: 'all 0.2s ease',
-        boxShadow: isTargeted ? `0 0 20px ${C.gold}33` : isActive ? `0 0 16px ${fc}33` : 'none',
-        position: 'relative',
-      }}
+      className={[
+        'relative flex flex-col overflow-hidden border-2 transition-all duration-200 select-none',
+        isDead ? 'opacity-30 grayscale pointer-events-none' : '',
+        isTargeted ? 'border-warn shadow-[0_0_20px_rgba(232,167,54,0.3)] bg-warn/5' : '',
+        isActive && !isTargeted ? 'border-blood/70 bg-blood/5 shadow-[0_0_14px_rgba(197,48,48,0.25)]' : '',
+        !isTargeted && !isActive ? 'border-lineStrong bg-bg2' : '',
+        isTargetable && !isDead ? 'cursor-pointer hover:border-warn/60' : '',
+      ].join(' ')}
     >
-      {/* top accent */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
-        background: `linear-gradient(90deg, ${isTargeted ? C.gold : isActive ? fc : C.line}, transparent)`,
-      }} />
+      {/* Top accent */}
+      <div className={`h-0.5 w-full ${isTargeted ? 'bg-gradient-to-r from-warn via-warn/60 to-transparent' : isActive ? 'bg-gradient-to-r from-blood via-blood/40 to-transparent' : 'bg-gradient-to-r from-line to-transparent'}`} />
 
-      {/* art — large, centered */}
-      <div style={{
-        width: '96px', height: '96px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-        filter: isDead
-          ? 'grayscale(1) opacity(0.3)'
-          : isTargeted
-            ? `drop-shadow(0 0 10px ${C.gold})`
-            : isActive
-              ? `drop-shadow(0 0 8px ${fc})`
-              : 'none',
-        transition: 'filter 0.2s',
-        transform: isTargeted ? 'scale(1.07)' : 'scale(1)',
-      }}>
+      {/* Portrait */}
+      <div className={`relative w-full aspect-square overflow-hidden flex items-center justify-center bg-bg3 transition-all duration-200 ${isTargeted ? 'scale-[1.03]' : ''}`}>
         {unit.art
-          ? <img src={`/assets/enemies/${unit.art}.png`} alt={unit.name}
-                 style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
-          : <span style={{ fontFamily: DISPLAY, fontSize: '40px', color: `${fc}77` }}>{unit.name.charAt(0)}</span>
+          ? <img src={`/assets/enemies/${unit.art}.png`} alt={unit.name} className="w-full h-full object-contain pixelated" />
+          : <span className="font-display text-4xl text-blood/40">{unit.name.charAt(0)}</span>
         }
+        {isActive && !isDead && (
+          <div className="absolute inset-0 border-2 border-blood/40 animate-pulse pointer-events-none" />
+        )}
+        {isTargeted && !isDead && (
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 font-mono text-[7px] text-warn tracking-widest bg-bg/80 px-1.5 py-0.5 border border-warn/40">
+            ◆ TARGET
+          </div>
+        )}
       </div>
 
-      {/* name */}
-      <div style={{ width: '100%', textAlign: 'center' }}>
-        <div style={{
-          fontFamily: DISPLAY, fontSize: '16px', letterSpacing: '0.05em',
-          color: isDead ? C.dim : isActive ? fc : C.ink,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {isDead ? '✕ ' : ''}{unit.name}
+      {/* Name + stats */}
+      <div className="px-2 pt-1.5 pb-1 flex flex-col gap-1">
+        <div className={`font-display text-sm tracking-wide overflow-hidden text-ellipsis whitespace-nowrap text-center ${isActive ? 'text-bloodLight' : 'text-ink'}`}>
+          {unit.name}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.12em', marginTop: '1px' }}>
+        <div className="font-mono text-[7px] text-dim text-center tracking-wider">
           SPD {unit.speed} · ATK {unit.atk} · DEF {unit.def}
         </div>
+
+        {/* HP bar */}
+        <SmootHpBar current={unit.hp} max={unit.maxHp} />
       </div>
 
-      {/* HP bar */}
-      <div style={{ width: '100%' }}>
-        <SmootHpBar current={unit.hp} max={unit.maxHp} color={hpColor} />
-      </div>
-
-      {/* target cue */}
-      {isTargetable && !isDead && (
-        <div style={{
-          fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.14em',
-          padding: '3px 8px', border: `1px dashed ${C.gold}55`, background: `${C.gold}08`,
-        }}>
-          ◆ CLICK TO TARGET
+      {/* Target prompt */}
+      {isTargetable && !isDead && !isTargeted && (
+        <div className="px-2 pb-1.5">
+          <div className="w-full font-mono text-[7px] text-dim text-center tracking-wide border border-dashed border-dim/40 py-0.5 hover:text-warn hover:border-warn/40 transition-colors">
+            CLICK TO TARGET
+          </div>
         </div>
-      )}
-      {isTargeted && !isTargetable && (
-        <div style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.14em' }}>▶ TARGETED</div>
       )}
     </div>
   )
 }
 
-// ── Player battle card — bottom 3 fixed slots ──────────────────────────────────
-// Shows art + name + HP + resource. Skills shown in bottom dock, not on card.
+// ── Player Battle Card — shows character + both gear resource bars ─────────────
 
 function PlayerBattleCard({
   unit, isActive, pendingSkill,
@@ -754,90 +752,79 @@ function PlayerBattleCard({
   pendingSkill: CombatSkill | null
 }) {
   const isDead = unit.hp <= 0
-  const fc = unit.factionColor
-  const hpPct = Math.max(0, unit.hp / unit.maxHp)
-  const hpColor = hpPct > 0.5 ? C.green : hpPct > 0.2 ? C.gold : C.blood
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: '8px',
-      padding: '12px',
-      background: isActive ? `${fc}0d` : C.bg2,
-      border: `2px solid ${isActive ? fc : C.lineStr}`,
-      transition: 'all 0.2s ease',
-      opacity: isDead ? 0.3 : 1,
-      boxShadow: isActive ? `0 0 16px ${fc}33` : 'none',
-      position: 'relative',
-      flex: 1,
-    }}>
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
-        background: `linear-gradient(90deg, ${isActive ? fc : C.line}, transparent)`,
-      }} />
+    <div
+      className={[
+        'relative flex flex-col gap-2 p-3 border-2 transition-all duration-200 flex-1',
+        isDead ? 'opacity-30' : '',
+        isActive ? 'bg-bg3 shadow-[0_0_16px_rgba(232,167,54,0.15)]' : 'bg-bg2 border-lineStrong',
+      ].join(' ')}
+      style={isActive ? { borderColor: unit.factionColor } : undefined}
+    >
+      {/* Top accent */}
+      <div
+        className="absolute top-0 left-0 right-0 h-0.5"
+        style={{ background: isActive ? `linear-gradient(90deg, ${unit.factionColor}, ${unit.factionColor}44, transparent)` : 'transparent' }}
+      />
 
-      {/* art + name row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{
-          width: '56px', height: '56px', flexShrink: 0,
-          border: `1px solid ${fc}44`,
-          background: `linear-gradient(135deg, ${fc}18, ${C.bg})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
-          boxShadow: isActive ? `0 0 12px ${fc}44` : 'none',
-          transition: 'box-shadow 0.2s',
-        }}>
+      {/* Art + name row */}
+      <div className="flex items-center gap-2.5">
+        <div
+          className="w-12 h-12 shrink-0 border flex items-center justify-center overflow-hidden transition-all"
+          style={{
+            borderColor: `${unit.factionColor}55`,
+            background: `linear-gradient(135deg, ${unit.factionColor}15, #0b0d10)`,
+            boxShadow: isActive ? `0 0 12px ${unit.factionColor}33` : 'none',
+          }}
+        >
           {unit.art
-            ? <img src={`/assets/characters/${unit.art}.png`} alt={unit.name}
-                   style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
-            : <span style={{ fontFamily: DISPLAY, fontSize: '24px', color: `${fc}77` }}>{unit.name.charAt(0)}</span>
+            ? <img src={`/assets/characters/${unit.art}.png`} alt={unit.name} className="w-full h-full object-cover pixelated" />
+            : <span className="font-display text-2xl" style={{ color: `${unit.factionColor}77` }}>{unit.name.charAt(0)}</span>
           }
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontFamily: DISPLAY, fontSize: '18px', letterSpacing: '0.04em',
-            color: isDead ? C.dim : C.ink,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <div className="font-display text-base text-ink tracking-wide overflow-hidden text-ellipsis whitespace-nowrap">
             {isDead ? '✕ ' : ''}{unit.name}
           </div>
-          <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.12em', marginTop: '2px' }}>
-            SPD {unit.speed} · ATK {unit.atk} · DEF {unit.def}
-          </div>
           {isActive && !isDead && (
-            <div style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, letterSpacing: '0.15em', marginTop: '3px' }}>
-              ▶ YOUR TURN
-            </div>
+            <div className="font-mono text-[7px] text-warn tracking-[0.15em]">▶ YOUR TURN</div>
           )}
+          {/* Gear badges */}
+          <div className="flex gap-1">
+            {unit.gear1Name && (
+              <span className="font-mono text-[6px] px-1 py-0.5 border border-amber-500/30 text-amber-400/70 bg-amber-500/5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[60px]" title={unit.gear1Name}>
+                {unit.gear1Name}
+              </span>
+            )}
+            {unit.gear2Name && (
+              <span className="font-mono text-[6px] px-1 py-0.5 border border-sky-500/30 text-sky-400/70 bg-sky-500/5 overflow-hidden text-ellipsis whitespace-nowrap max-w-[60px]" title={unit.gear2Name}>
+                {unit.gear2Name}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* HP */}
-      <SmootHpBar current={unit.hp} max={unit.maxHp} color={hpColor} />
+      {/* HP bar */}
+      <SmootHpBar current={unit.hp} max={unit.maxHp} />
 
-      {/* Resource */}
-      {unit.maxResource > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, width: '14px' }}>
-            {unit.resourceName.slice(0, 2).toUpperCase()}
-          </span>
-          <div style={{ flex: 1, height: '5px', background: C.bg3, border: `1px solid ${C.line}`, position: 'relative', overflow: 'hidden' }}>
-            <div style={{
-              position: 'absolute', top: 0, left: 0, bottom: 0,
-              width: `${(unit.resource / unit.maxResource) * 100}%`,
-              background: C.gold, transition: 'width 0.4s ease',
-            }} />
-          </div>
-          <span style={{ fontFamily: MONO, fontSize: '7px', color: C.gold, minWidth: '28px', textAlign: 'right' }}>{unit.resource}/{unit.maxResource}</span>
-        </div>
+      {/* Per-gear resource bars */}
+      {unit.gear1Resource != null && unit.gear1Resource > 0 && (
+        <ResourceBar
+          current={unit.resource}
+          max={unit.gear1Resource + (unit.gear2Resource ?? 0)}
+          name={unit.gear1ResourceName ?? 'RES'}
+          gearIdx={0}
+        />
       )}
 
-      {/* selected skill indicator */}
+      {/* Selected skill indicator */}
       {pendingSkill && isActive && (
-        <div style={{
-          padding: '4px 8px', background: `${fc}15`,
-          border: `1px solid ${fc}44`,
-          fontFamily: MONO, fontSize: '8px', color: fc, letterSpacing: '0.1em',
-        }}>
+        <div
+          className="px-2 py-1 border font-mono text-[8px] tracking-wide"
+          style={{ borderColor: `${unit.factionColor}44`, background: `${unit.factionColor}10`, color: unit.factionColor }}
+        >
           ▶ {pendingSkill.name}
         </div>
       )}
@@ -845,43 +832,32 @@ function PlayerBattleCard({
   )
 }
 
-// ── Turn order strip (horizontal) ─────────────────────────────────────────────
+// ── Turn order strip ───────────────────────────────────────────────────────────
 
 function TurnStrip({ units, currentIdx }: { units: CombatUnit[]; currentIdx: number }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0',
-      background: C.bg2, borderBottom: `1px solid ${C.line}`, padding: '6px 14px',
-    }}>
-      <span style={{
-        fontFamily: MONO, fontSize: '7px', color: C.dim,
-        letterSpacing: '0.2em', textTransform: 'uppercase',
-        marginRight: '12px', flexShrink: 0,
-      }}>
-        ORDER
-      </span>
-      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1, alignItems: 'center' }}>
+    <div className="flex items-center gap-0 bg-bg2 border-b border-line px-3.5 py-1.5">
+      <span className="font-mono text-[7px] text-dim tracking-[0.2em] uppercase mr-3 shrink-0">ORDER</span>
+      <div className="flex gap-1 overflow-x-auto flex-1 items-center">
         {units.map((u, i) => {
-          const isNow = i === currentIdx
+          const isNow  = i === currentIdx
           const isDead = u.hp <= 0
           return (
-            <div key={`${u.id}-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-              <div style={{
-                width: '34px', height: '34px',
-                border: `2px solid ${isNow ? u.factionColor : isDead ? C.line : `${u.factionColor}44`}`,
-                background: isNow ? `${u.factionColor}22` : C.bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden', opacity: isDead ? 0.25 : 1,
-                boxShadow: isNow ? `0 0 10px ${u.factionColor}66` : 'none',
-                transition: 'all 0.2s',
-              }}>
+            <div key={`${u.id}-${i}`} className="flex flex-col items-center gap-0.5 shrink-0">
+              <div
+                className={`w-8 h-8 border-2 flex items-center justify-center overflow-hidden transition-all duration-200 ${isDead ? 'opacity-25' : ''}`}
+                style={{
+                  borderColor: isNow ? u.factionColor : isDead ? '#24282f' : `${u.factionColor}44`,
+                  background:  isNow ? `${u.factionColor}22` : '#0b0d10',
+                  boxShadow:   isNow ? `0 0 10px ${u.factionColor}66` : 'none',
+                }}
+              >
                 {u.art
-                  ? <img src={`/assets/${u.isEnemy ? 'enemies' : 'characters'}/${u.art}.png`} alt=""
-                         style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
-                  : <span style={{ fontFamily: DISPLAY, fontSize: '14px', color: `${u.factionColor}88` }}>{u.name.charAt(0)}</span>
+                  ? <img src={`/assets/${u.isEnemy ? 'enemies' : 'characters'}/${u.art}.png`} alt="" className="w-full h-full object-cover pixelated" />
+                  : <span className="font-display text-sm" style={{ color: `${u.factionColor}88` }}>{u.name.charAt(0)}</span>
                 }
               </div>
-              {isNow && <div style={{ width: '4px', height: '4px', background: C.gold, borderRadius: '50%' }} />}
+              {isNow && <div className="w-1 h-1 bg-warn rounded-full" />}
             </div>
           )
         })}
@@ -892,15 +868,15 @@ function TurnStrip({ units, currentIdx }: { units: CombatUnit[]; currentIdx: num
 
 // ── Combat Log ─────────────────────────────────────────────────────────────────
 
-const LOG_COLORS: Record<CombatLogEntry['type'], string> = {
-  action:  C.gold,
-  damage:  C.blood,
-  miss:    C.dim,
-  crit:    '#ff5555',
-  info:    '#5a8a6a',
-  wave:    '#9b59d4',
-  victory: C.green,
-  defeat:  C.blood,
+const LOG_TEXT_CLASS: Record<CombatLogEntry['type'], string> = {
+  action:  'text-warn',
+  damage:  'text-blood',
+  miss:    'text-dim',
+  crit:    'text-bloodLight',
+  info:    'text-success',
+  wave:    'text-purple-400',
+  victory: 'text-success',
+  defeat:  'text-blood',
 }
 
 function CombatLog({ entries }: { entries: CombatLogEntry[] }) {
@@ -910,24 +886,138 @@ function CombatLog({ entries }: { entries: CombatLogEntry[] }) {
   }, [entries])
 
   return (
-    <div style={{ border: `1px solid ${C.lineStr}`, background: C.bg, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{
-        padding: '8px 12px', borderBottom: `1px solid ${C.line}`,
-        fontFamily: MONO, fontSize: '7px', letterSpacing: '0.25em', color: C.dim, textTransform: 'uppercase',
-        background: C.bg2, flexShrink: 0,
-      }}>
+    <div className="border border-lineStrong bg-bg flex flex-col h-full">
+      <div className="px-3 py-2 border-b border-line font-mono text-[7px] tracking-[0.25em] text-dim uppercase bg-bg2 shrink-0">
         ◉ Combat Log
       </div>
-      <div ref={ref} style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div ref={ref} className="flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-1">
         {entries.length === 0
-          ? <div style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, textAlign: 'center', marginTop: '40px' }}>Awaiting combat...</div>
+          ? <div className="font-mono text-[9px] text-dim text-center mt-10">Awaiting combat...</div>
           : entries.map((e, i) => (
-            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-              <span style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, flexShrink: 0, paddingTop: '1px', minWidth: '22px' }}>T{e.turn}</span>
-              <span style={{ fontFamily: MONO, fontSize: '10px', color: LOG_COLORS[e.type], lineHeight: 1.5 }}>{e.text}</span>
+            <div key={i} className="flex gap-2 items-start">
+              <span className="font-mono text-[7px] text-dim shrink-0 pt-px min-w-[22px]">T{e.turn}</span>
+              <span className={`font-mono text-[10px] ${LOG_TEXT_CLASS[e.type]} leading-relaxed`}>{e.text}</span>
             </div>
           ))
         }
+      </div>
+    </div>
+  )
+}
+
+// ── Skill Panel — grouped by gear ─────────────────────────────────────────────
+
+function SkillPanel({
+  unit, pendingSkill, onPickSkill, canExecute, onExecute,
+}: {
+  unit: CombatUnit
+  pendingSkill: CombatSkill | null
+  onPickSkill: (sk: CombatSkill) => void
+  canExecute: boolean
+  onExecute: () => void
+}) {
+  // Group skills by gear slot
+  const gear1Skills = unit.skills.filter(s => s.gearSlot === 0)
+  const gear2Skills = unit.skills.filter(s => s.gearSlot === 1)
+  const ungrouped   = unit.skills.filter(s => s.gearSlot === undefined)
+
+  function SkillButton({ sk, gearIdx }: { sk: CombatSkill; gearIdx?: 0 | 1 }) {
+    const isPicked   = pendingSkill?.id === sk.id
+    const canAfford  = unit.maxResource === 0 || unit.resource >= sk.cost
+    const labelClass = gearIdx !== undefined ? GEAR_LABEL_CLASS[gearIdx] : 'text-warn'
+    const activeClass = gearIdx !== undefined ? GEAR_SKILL_ACTIVE[gearIdx] : 'border-warn bg-warn/10 text-warn'
+    const hoverClass  = gearIdx !== undefined ? GEAR_SKILL_HOVER[gearIdx] : 'hover:border-warn/60'
+
+    return (
+      <button
+        onClick={() => canAfford && onPickSkill(sk)}
+        disabled={!canAfford}
+        className={[
+          'px-3 py-2 border text-left flex flex-col gap-0.5 transition-all duration-100',
+          isPicked ? activeClass : `border-line bg-bg text-ink ${hoverClass}`,
+          canAfford ? 'cursor-pointer' : 'cursor-not-allowed opacity-35',
+        ].join(' ')}
+      >
+        <span className="font-display text-sm tracking-wide">{sk.name}</span>
+        <span className={`font-mono text-[7px] ${isPicked ? '' : labelClass}`}>
+          PWR {sk.basePower}{sk.cost > 0 ? ` · ${sk.cost}${unit.resourceName.charAt(0)}` : ''}
+        </span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="p-3 flex flex-col gap-2.5 h-full">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <span className="font-mono text-[8px] text-dim tracking-[0.2em] uppercase">What will {unit.name} do?</span>
+        <button
+          onClick={onExecute}
+          disabled={!canExecute}
+          className={`px-5 py-1.5 font-display text-base tracking-wider transition-all duration-150 border ${
+            canExecute
+              ? 'bg-warn text-bg border-warn cursor-pointer hover:shadow-[0_0_14px_rgba(232,167,54,0.4)]'
+              : 'bg-bg border-line text-dim cursor-not-allowed'
+          }`}
+        >
+          FIGHT
+        </button>
+      </div>
+
+      {/* Gear-grouped skill sections */}
+      <div className="flex gap-3 flex-1">
+        {/* Gear 1 skills */}
+        {gear1Skills.length > 0 && (
+          <div className="flex-1 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 border border-amber-400/60 rotate-45" />
+              <span className="font-mono text-[7px] text-amber-400/80 tracking-[0.2em] uppercase">
+                {unit.gear1Name ?? 'Gear 1'}
+              </span>
+              {unit.gear1Resource != null && unit.gear1Resource > 0 && (
+                <span className="ml-auto font-mono text-[7px] text-amber-300 border border-amber-500/20 px-1">
+                  {unit.resource}/{unit.gear1Resource} {unit.gear1ResourceName}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              {gear1Skills.map(sk => <SkillButton key={sk.id} sk={sk} gearIdx={0} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Gear 2 skills */}
+        {gear2Skills.length > 0 && (
+          <div className="flex-1 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 border border-sky-400/60 rotate-45" />
+              <span className="font-mono text-[7px] text-sky-400/80 tracking-[0.2em] uppercase">
+                {unit.gear2Name ?? 'Gear 2'}
+              </span>
+              {unit.gear2Resource != null && unit.gear2Resource > 0 && (
+                <span className="ml-auto font-mono text-[7px] text-sky-300 border border-sky-500/20 px-1">
+                  {unit.resource}/{unit.gear2Resource} {unit.gear2ResourceName}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              {gear2Skills.map(sk => <SkillButton key={sk.id} sk={sk} gearIdx={1} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Ungrouped fallback */}
+        {ungrouped.length > 0 && (
+          <div className="flex-1 grid grid-cols-2 gap-1.5 content-start">
+            {ungrouped.map(sk => <SkillButton key={sk.id} sk={sk} />)}
+          </div>
+        )}
+
+        {unit.skills.length === 0 && (
+          <div className="flex-1 flex items-center justify-center border border-dashed border-line">
+            <span className="font-mono text-[9px] text-dim">No skills equipped</span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -987,26 +1077,22 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
   }
 
   if (loading) return (
-    <div style={{ padding: '60px', textAlign: 'center', fontFamily: MONO, fontSize: '10px', color: C.dim, letterSpacing: '0.2em' }}>
-      ▶▶ LOADING SIM DATA...
-    </div>
+    <div className="py-16 text-center font-mono text-[10px] text-dim tracking-[0.2em]">▶▶ LOADING SIM DATA...</div>
   )
   if (!simData) return (
-    <div style={{ padding: '40px', textAlign: 'center', fontFamily: MONO, fontSize: '10px', color: C.blood }}>
-      ⚠ Failed to load simulator data.
-    </div>
+    <div className="py-10 text-center font-mono text-[10px] text-blood">⚠ Failed to load simulator data.</div>
   )
 
   const canStart = config.charSlots.some(cs => cs.character !== null) &&
     config.waves.some(wave => wave.slots.some(es => es.enemy !== null))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+    <div className="flex flex-col gap-7">
 
       {/* Player Roster */}
       <div>
         <SectionHead label="Player Roster — 3 Character Slots" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(300px, 1fr))', gap: '16px' }}>
+        <div className="grid grid-cols-3 gap-4 min-w-0" style={{ gridTemplateColumns: 'repeat(3, minmax(300px, 1fr))' }}>
           {([0, 1, 2] as const).map(si => (
             <CharSlotPanel
               key={si}
@@ -1031,56 +1117,71 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
         </div>
       </div>
 
-      {/* Enemy Config */}
+      {/* Enemy Configuration */}
       <div>
         <SectionHead label="Enemy Configuration" />
 
-        <div style={{ display: 'flex', gap: '24px', marginBottom: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, letterSpacing: '0.2em' }}>SLOTS PER WAVE:</span>
-            <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="flex gap-6 mb-3 items-center">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-[9px] text-dim tracking-[0.2em]">SLOTS PER WAVE:</span>
+            <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map(n => (
-                <button key={n} onClick={() => updateEnemySlotCount(n)} style={{
-                  width: '28px', height: '28px',
-                  background: config.enemySlotCount === n ? C.blood : C.bg2,
-                  border: `1px solid ${config.enemySlotCount === n ? C.blood : C.line}`,
-                  color: config.enemySlotCount === n ? C.ink : C.dim,
-                  cursor: 'pointer', fontFamily: MONO, fontSize: '11px', transition: 'all 0.1s',
-                }}>{n}</button>
+                <button
+                  key={n}
+                  onClick={() => updateEnemySlotCount(n)}
+                  className={`w-7 h-7 font-mono text-[11px] border transition-all duration-100 cursor-pointer ${
+                    config.enemySlotCount === n
+                      ? 'bg-blood border-blood text-ink'
+                      : 'bg-bg2 border-line text-dim hover:border-blood/50 hover:text-muted'
+                  }`}
+                >
+                  {n}
+                </button>
               ))}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, letterSpacing: '0.2em' }}>WAVES:</span>
-            <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-[9px] text-dim tracking-[0.2em]">WAVES:</span>
+            <div className="flex gap-1">
               {[1, 2, 3].map(n => (
-                <button key={n} onClick={() => updateWaveCount(n)} style={{
-                  width: '28px', height: '28px',
-                  background: config.waveCount === n ? C.blood : C.bg2,
-                  border: `1px solid ${config.waveCount === n ? C.blood : C.line}`,
-                  color: config.waveCount === n ? C.ink : C.dim,
-                  cursor: 'pointer', fontFamily: MONO, fontSize: '11px', transition: 'all 0.1s',
-                }}>{n}</button>
+                <button
+                  key={n}
+                  onClick={() => updateWaveCount(n)}
+                  className={`w-7 h-7 font-mono text-[11px] border transition-all duration-100 cursor-pointer ${
+                    config.waveCount === n
+                      ? 'bg-blood border-blood text-ink'
+                      : 'bg-bg2 border-line text-dim hover:border-blood/50 hover:text-muted'
+                  }`}
+                >
+                  {n}
+                </button>
               ))}
             </div>
           </div>
         </div>
 
         {config.waveCount > 1 && (
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+          <div className="flex gap-1 mb-2.5">
             {Array.from({ length: config.waveCount }).map((_, wi) => (
-              <button key={wi} onClick={() => setActiveWave(wi)} style={{
-                padding: '4px 14px',
-                background: activeWave === wi ? `${C.blood}22` : C.bg2,
-                border: `1px solid ${activeWave === wi ? C.blood : C.line}`,
-                color: activeWave === wi ? C.blood : C.dim,
-                cursor: 'pointer', fontFamily: MONO, fontSize: '9px', letterSpacing: '0.15em', transition: 'all 0.1s',
-              }}>WAVE {wi + 1}</button>
+              <button
+                key={wi}
+                onClick={() => setActiveWave(wi)}
+                className={`px-3.5 py-1 font-mono text-[9px] tracking-[0.15em] border transition-all cursor-pointer ${
+                  activeWave === wi
+                    ? 'bg-blood/20 border-blood text-blood'
+                    : 'bg-bg2 border-line text-dim hover:border-blood/40'
+                }`}
+              >
+                WAVE {wi + 1}
+              </button>
             ))}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${config.enemySlotCount}, minmax(220px, 1fr))`, gap: '12px' }}>
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: `repeat(${config.enemySlotCount}, minmax(200px, 1fr))` }}
+        >
           {config.waves[activeWave]?.slots.map((slot, si) => (
             <EnemySlotCard
               key={si}
@@ -1098,23 +1199,18 @@ export function SimulatorConfig({ onStart }: { onStart: (config: SimConfig) => v
       </div>
 
       {/* Start */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', paddingTop: '8px', borderTop: `1px solid ${C.line}` }}>
+      <div className="flex justify-end items-center gap-3 pt-2 border-t border-line">
         {!canStart && (
-          <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim }}>Need ≥1 character and ≥1 enemy</span>
+          <span className="font-mono text-[8px] text-dim">Need ≥1 character and ≥1 enemy</span>
         )}
         <button
           onClick={() => canStart && onStart(config)}
           disabled={!canStart}
-          style={{
-            padding: '12px 36px',
-            background: canStart ? C.gold : C.bg2,
-            color: canStart ? '#0b0d10' : C.dim,
-            border: `1px solid ${canStart ? C.gold : C.line}`,
-            cursor: canStart ? 'pointer' : 'not-allowed',
-            fontFamily: DISPLAY, fontSize: '22px', letterSpacing: '0.08em', transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { if (canStart) e.currentTarget.style.boxShadow = `0 0 20px ${C.gold}44` }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
+          className={`px-9 py-3 font-display text-2xl tracking-wider border transition-all duration-150 ${
+            canStart
+              ? 'bg-warn text-bg border-warn cursor-pointer hover:shadow-[0_0_24px_rgba(232,167,54,0.4)]'
+              : 'bg-bg2 text-dim border-line cursor-not-allowed'
+          }`}
         >
           INITIATE COMBAT
         </button>
@@ -1139,7 +1235,7 @@ export function CombatModule({ config, onRetry, onReset }: {
   const [turn, setTurn]           = useState(1)
   const [turnOrder, setTurnOrder] = useState<CombatUnit[]>([])
   const [actorIdx, setActorIdx]   = useState(0)
-  const [pendingSkill, setPendingSkill]   = useState<CombatSkill | null>(null)
+  const [pendingSkill, setPendingSkill] = useState<CombatSkill | null>(null)
   const [targetId, setTargetId]   = useState<string | null>(null)
   const [log, setLog]             = useState<CombatLogEntry[]>([
     { turn: 0, text: 'Wave 1 begins.', type: 'wave' },
@@ -1150,13 +1246,11 @@ export function CombatModule({ config, onRetry, onReset }: {
     setLog(prev => [...prev, { turn: t, text, type }])
   }, [])
 
-  // Build sorted turn order from alive units
   const buildOrder = useCallback((p: CombatUnit[], e: CombatUnit[]) =>
     [...p.filter(u => u.hp > 0), ...e.filter(u => u.hp > 0)]
       .sort((a, b) => b.speed - a.speed)
   , [])
 
-  // Initialize turn order once on mount and when wave changes
   useEffect(() => {
     if (turnOrder.length === 0) {
       setTurnOrder(buildOrder(players, enemies))
@@ -1168,11 +1262,9 @@ export function CombatModule({ config, onRetry, onReset }: {
   const currentActor = turnOrder[actorIdx] ?? null
   const isPlayerTurn = currentActor !== null && !currentActor.isEnemy
 
-  // When it's an enemy turn, auto-select skill and resolve after a short delay
   useEffect(() => {
     if (phase !== 'select' || !currentActor || isPlayerTurn) return
     if (resolving.current) return
-
     const timer = setTimeout(() => {
       const availSkills = currentActor.skills.filter(s => s.basePower > 0)
       const autoSkill: CombatSkill = availSkills.length > 0
@@ -1180,11 +1272,9 @@ export function CombatModule({ config, onRetry, onReset }: {
         : { id: 'basic', name: 'Strike', basePower: Math.floor(currentActor.atk * 0.5), cost: 0 }
       setPendingSkill(autoSkill)
     }, 600)
-
     return () => clearTimeout(timer)
   }, [phase, currentActor, isPlayerTurn])
 
-  // When enemy has a skill assigned, auto-resolve
   useEffect(() => {
     if (phase !== 'select' || !currentActor || isPlayerTurn || !pendingSkill) return
     doResolve(pendingSkill, null)
@@ -1206,8 +1296,7 @@ export function CombatModule({ config, onRetry, onReset }: {
       return
     }
 
-    // Pick target
-    const pool = currentActor.isEnemy ? pState.filter(u => u.hp > 0) : eState.filter(u => u.hp > 0)
+    const pool   = currentActor.isEnemy ? pState.filter(u => u.hp > 0) : eState.filter(u => u.hp > 0)
     const target = chosenTarget
       ? pool.find(u => u.id === chosenTarget) ?? pool[Math.floor(Math.random() * pool.length)]
       : pool[Math.floor(Math.random() * pool.length)]
@@ -1231,7 +1320,6 @@ export function CombatModule({ config, onRetry, onReset }: {
     } else {
       eState = eState.map(u => u.id === target.id ? { ...u, hp: newHp } : u)
       setEnemies([...eState])
-      // resource regen
       if (actor.maxResource > 0) {
         const newRes = Math.min(actor.maxResource, actor.resource + actor.resourceRegen - (skill.cost ?? 0))
         pState = pState.map(u => u.id === actor.id ? { ...u, resource: newRes } : u)
@@ -1283,7 +1371,6 @@ export function CombatModule({ config, onRetry, onReset }: {
       return
     }
 
-    // Advance to next actor
     const nextIdx = actorIdx + 1
     if (nextIdx >= turnOrder.length) {
       const newTurn = currentTurn + 1
@@ -1301,235 +1388,135 @@ export function CombatModule({ config, onRetry, onReset }: {
   }
 
   const canExecute = isPlayerTurn && !!pendingSkill && phase === 'select'
-
-  // Latest log entry for the dialog box
   const lastLog = log[log.length - 1]
-
-  // Active player unit (for skill panel)
   const activePlayer = isPlayerTurn && currentActor ? players.find(p => p.id === currentActor.id) ?? null : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', background: C.bg, border: `1px solid ${C.lineStr}` }}>
+    <div className="flex flex-col bg-bg border border-lineStrong">
 
-      {/* ── Top bar: wave / turn / controls ── */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '8px 14px', background: C.bg2, borderBottom: `1px solid ${C.line}`,
-      }}>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <span style={{ fontFamily: DISPLAY, fontSize: '22px', letterSpacing: '0.06em', color: C.gold }}>
+      {/* Top bar */}
+      <div className="flex justify-between items-center px-3.5 py-2 bg-bg2 border-b border-line">
+        <div className="flex gap-4 items-center">
+          <span className="font-display text-2xl tracking-wider text-warn">
             WAVE {currentWave + 1}/{config.waveCount}
           </span>
-          <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em' }}>T{turn}</span>
+          <span className="font-mono text-[8px] text-dim tracking-[0.2em]">T{turn}</span>
           {(phase === 'victory' || phase === 'defeat') && (
-            <span style={{ fontFamily: DISPLAY, fontSize: '22px', letterSpacing: '0.06em', color: phase === 'victory' ? C.green : C.blood }}>
+            <span className={`font-display text-2xl tracking-wider ${phase === 'victory' ? 'text-success' : 'text-blood'}`}>
               {phase === 'victory' ? '★ VICTORY' : '✕ DEFEAT'}
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button onClick={onRetry} style={{
-            padding: '5px 14px', background: C.bg, border: `1px solid ${C.lineStr}`,
-            color: C.muted, cursor: 'pointer', fontFamily: MONO, fontSize: '8px', letterSpacing: '0.12em', transition: 'all 0.1s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.lineStr; e.currentTarget.style.color = C.muted }}
-          >↩ RETRY</button>
-          <button onClick={onReset} style={{
-            padding: '5px 14px', background: C.bg, border: `1px solid ${C.blood}44`,
-            color: C.blood, cursor: 'pointer', fontFamily: MONO, fontSize: '8px', letterSpacing: '0.12em', transition: 'all 0.1s', opacity: 0.7,
-          }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '0.7' }}
-          >✕ RESET</button>
+        <div className="flex gap-1.5">
+          <button
+            onClick={onRetry}
+            className="px-3.5 py-1.5 bg-bg border border-lineStrong text-muted font-mono text-[8px] tracking-wide cursor-pointer hover:border-warn hover:text-warn transition-all"
+          >
+            ↩ RETRY
+          </button>
+          <button
+            onClick={onReset}
+            className="px-3.5 py-1.5 bg-bg border border-blood/40 text-blood font-mono text-[8px] tracking-wide cursor-pointer hover:bg-blood/10 transition-all opacity-70 hover:opacity-100"
+          >
+            ✕ RESET
+          </button>
         </div>
       </div>
 
-      {/* ── Turn order strip ── */}
+      {/* Turn order */}
       <TurnStrip units={turnOrder} currentIdx={actorIdx} />
 
       {/* ── Arena ── */}
-      <div style={{
-        position: 'relative',
-        background: `linear-gradient(180deg, #0c0e14 0%, #080a0e 55%, #0e1018 55%, #0a0c10 100%)`,
-        height: '340px',
-        display: 'flex', alignItems: 'stretch',
-        overflow: 'hidden',
-        borderBottom: `1px solid ${C.line}`,
-      }}>
-        {/* ground line */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: '55%', height: '1px', background: C.line }} />
+      <div className="relative flex flex-col gap-0 border-b border-line overflow-hidden" style={{ background: 'linear-gradient(180deg, #0c0e14 0%, #080a0e 55%, #0e1018 55%, #0a0c10 100%)' }}>
+        {/* Ground line */}
+        <div className="absolute left-0 right-0 top-[55%] h-px bg-line" />
 
-        {/* ── Enemy side: HP boxes top-left, sprites top-right ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '16px 12px 0 16px', gap: '8px', zIndex: 1 }}>
-          <div style={{ fontFamily: MONO, fontSize: '7px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '2px' }}>
-            ◈ Enemy Force
+        {/* Enemy row — cards at top */}
+        <div className="relative z-10 px-4 pt-4 pb-2 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 border border-blood/50 rotate-45" />
+            <span className="font-mono text-[7px] text-blood/60 tracking-[0.3em] uppercase">Enemy Force</span>
+            <div className="flex-1 h-px bg-blood/10" />
           </div>
-          {enemies.map(u => (
-            <PokeHpBox
-              key={u.id}
-              unit={u}
-              isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
-              isTargeted={targetId === u.id}
-              isActive={currentActor?.id === u.id && currentActor.isEnemy}
-              onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
-            />
-          ))}
+          <div className="flex gap-3 flex-wrap">
+            {enemies.map(u => (
+              <div key={u.id} className="w-36">
+                <EnemyBattleCard
+                  unit={u}
+                  isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
+                  isTargeted={targetId === u.id}
+                  isActive={currentActor?.id === u.id && currentActor.isEnemy}
+                  onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Enemy sprites top-right */}
-        <div style={{ position: 'absolute', right: '10%', top: '6%', display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
-          {enemies.map(u => (
-            <ArenaBattler
-              key={u.id}
-              unit={u}
-              side="front"
-              isActive={currentActor?.id === u.id && currentActor.isEnemy}
-              isTargetable={isPlayerTurn && phase === 'select' && u.hp > 0}
-              isTargeted={targetId === u.id}
-              onTargetClick={() => { setTargetId(u.id); pushLog(`${u.name} targeted.`, 'info', turn) }}
-            />
-          ))}
-        </div>
-
-        {/* Player sprites bottom-left */}
-        <div style={{ position: 'absolute', left: '6%', bottom: '10%', display: 'flex', gap: '20px', alignItems: 'flex-end' }}>
-          {players.map(u => (
-            <ArenaBattler
-              key={u.id}
-              unit={u}
-              side="back"
-              isActive={currentActor?.id === u.id && !currentActor.isEnemy}
-              isTargetable={false}
-              isTargeted={false}
-            />
-          ))}
-        </div>
-
-        {/* ── Player HP boxes bottom-right ── */}
-        <div style={{ position: 'absolute', right: '14px', bottom: '12px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
-          {players.map(u => (
-            <PokeHpBox
-              key={u.id}
-              unit={u}
-              isTargetable={false}
-              isTargeted={false}
-              isActive={currentActor?.id === u.id && !currentActor.isEnemy}
-            />
-          ))}
+        {/* Player row — cards at bottom */}
+        <div className="relative z-10 px-4 pt-8 pb-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 border border-warn/50 rotate-45" />
+            <span className="font-mono text-[7px] text-warn/60 tracking-[0.3em] uppercase">Your Squad</span>
+            <div className="flex-1 h-px bg-warn/10" />
+          </div>
+          <div className="flex gap-3">
+            {players.map(u => (
+              <PlayerBattleCard
+                key={u.id}
+                unit={u}
+                isActive={currentActor?.id === u.id && !currentActor.isEnemy}
+                pendingSkill={currentActor?.id === u.id ? pendingSkill : null}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Bottom dock: dialog + skills ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '160px' }}>
+      {/* ── Bottom dock ── */}
+      <div className="grid grid-cols-2 min-h-[160px]">
 
-        {/* Dialog box (left) */}
-        <div style={{
-          borderRight: `1px solid ${C.line}`, borderTop: `1px solid ${C.line}`,
-          padding: '18px 22px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-          background: C.bg,
-        }}>
+        {/* Dialog box */}
+        <div className="border-r border-t border-line px-5 py-4 flex flex-col justify-between bg-bg">
           <div>
-            {/* latest log line shown large like Pokémon dialog */}
             {lastLog && (
-              <p style={{ fontFamily: MONO, fontSize: '13px', color: C.ink, lineHeight: 1.6, margin: 0 }}>
-                {lastLog.text}
-              </p>
+              <p className="font-mono text-[13px] text-ink leading-relaxed m-0">{lastLog.text}</p>
             )}
           </div>
-
-          {/* scroll hint / phase label */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+          <div className="flex justify-between items-center mt-2.5">
             {phase === 'select' && isPlayerTurn && currentActor && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.1em' }}>
+              <span className="font-mono text-[8px] text-dim tracking-wide">
                 <span style={{ color: currentActor.factionColor }}>{currentActor.name}</span>
-                {pendingSkill && <span style={{ color: C.gold }}> · {pendingSkill.name}</span>}
-                {targetId && <span style={{ color: C.gold }}> → {enemies.find(e => e.id === targetId)?.name ?? '?'}</span>}
+                {pendingSkill && <span className="text-warn"> · {pendingSkill.name}</span>}
+                {targetId && <span className="text-warn"> → {enemies.find(e => e.id === targetId)?.name ?? '?'}</span>}
               </span>
             )}
             {phase === 'select' && !isPlayerTurn && currentActor && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim }}>
-                <span style={{ color: C.blood }}>{currentActor.name}</span> is acting...
+              <span className="font-mono text-[8px] text-dim">
+                <span className="text-blood">{currentActor.name}</span> is acting...
               </span>
             )}
             {phase === 'resolving' && (
-              <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em' }}>▶▶</span>
+              <span className="font-mono text-[8px] text-dim tracking-[0.2em]">▶▶</span>
             )}
             {(phase === 'victory' || phase === 'defeat') && <span />}
-            {/* log scroll indicator */}
-            <span style={{ fontFamily: MONO, fontSize: '10px', color: C.dim }}>▼</span>
+            <span className="font-mono text-[10px] text-dim">▼</span>
           </div>
         </div>
 
-        {/* Skill / action panel (right — shown on player turn, else log) */}
-        <div style={{ borderTop: `1px solid ${C.line}`, background: C.bg2 }}>
+        {/* Skill panel / Log */}
+        <div className="border-t border-line bg-bg2">
           {phase === 'select' && activePlayer && activePlayer.hp > 0
             ? (
-              <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: MONO, fontSize: '8px', color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>What will {activePlayer.name} do?</span>
-                  <button
-                    onClick={() => canExecute && doResolve(pendingSkill!, targetId)}
-                    disabled={!canExecute}
-                    style={{
-                      padding: '6px 20px',
-                      background: canExecute ? C.gold : C.bg,
-                      color: canExecute ? '#0b0d10' : C.dim,
-                      border: `1px solid ${canExecute ? C.gold : C.line}`,
-                      cursor: canExecute ? 'pointer' : 'not-allowed',
-                      fontFamily: DISPLAY, fontSize: '16px', letterSpacing: '0.06em', transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => { if (canExecute) e.currentTarget.style.boxShadow = `0 0 12px ${C.gold}44` }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
-                  >
-                    FIGHT
-                  </button>
-                </div>
-                {/* skill grid — 2 cols */}
-                {activePlayer.skills.length === 0
-                  ? <div style={{ fontFamily: MONO, fontSize: '9px', color: C.dim, textAlign: 'center', padding: '16px', border: `1px dashed ${C.line}` }}>No skills</div>
-                  : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', flex: 1 }}>
-                      {activePlayer.skills.map(sk => {
-                        const isPicked  = pendingSkill?.id === sk.id
-                        const canAfford = activePlayer.maxResource === 0 || activePlayer.resource >= sk.cost
-                        const fc = activePlayer.factionColor
-                        return (
-                          <button
-                            key={sk.id}
-                            onClick={() => canAfford && setPendingSkill(sk)}
-                            disabled={!canAfford}
-                            style={{
-                              padding: '10px 12px',
-                              background: isPicked ? `${fc}22` : C.bg,
-                              border: `2px solid ${isPicked ? fc : C.line}`,
-                              color: isPicked ? fc : canAfford ? C.ink : C.dim,
-                              cursor: canAfford ? 'pointer' : 'not-allowed',
-                              fontFamily: MONO, fontSize: '10px', textAlign: 'left',
-                              display: 'flex', flexDirection: 'column', gap: '2px',
-                              transition: 'all 0.1s',
-                              opacity: canAfford ? 1 : 0.35,
-                            }}
-                            onMouseEnter={e => { if (canAfford && !isPicked) e.currentTarget.style.borderColor = `${fc}88` }}
-                            onMouseLeave={e => { if (!isPicked) e.currentTarget.style.borderColor = C.line }}
-                          >
-                            <span style={{ fontFamily: DISPLAY, fontSize: '15px', letterSpacing: '0.04em' }}>{sk.name}</span>
-                            <span style={{ color: C.gold, fontSize: '8px' }}>
-                              PWR {sk.basePower}{sk.cost > 0 ? ` · ${sk.cost}${activePlayer.resourceName.charAt(0)}` : ''}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                }
-              </div>
+              <SkillPanel
+                unit={activePlayer}
+                pendingSkill={pendingSkill}
+                onPickSkill={setPendingSkill}
+                canExecute={canExecute}
+                onExecute={() => canExecute && doResolve(pendingSkill!, targetId)}
+              />
             )
-            : (
-              /* Log panel when not player's skill-select turn */
-              <CombatLog entries={log} />
-            )
+            : <CombatLog entries={log} />
           }
         </div>
       </div>
